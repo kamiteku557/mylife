@@ -1,0 +1,24 @@
+services:
+  - type: web
+    name: mylife-api
+    env: python
+    plan: free
+    rootDir: apps/backend
+    buildCommand: pip install uv && UV_CACHE_DIR=/opt/render/project/.cache/uv uv sync --frozen
+    startCommand: UV_CACHE_DIR=/opt/render/project/.cache/uv uv run fastapi run app/main.py --host 0.0.0.0 --port $PORT
+    healthCheckPath: /api/v1/health
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: APP_NAME
+        value: mylife-api
+      - key: CORS_ALLOW_ORIGINS
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_ANON_KEY
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: SUPABASE_JWT_SECRET
+        sync: false

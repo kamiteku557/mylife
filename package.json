@@ -1,0 +1,13 @@
+{
+  "name": "mylife",
+  "private": true,
+  "packageManager": "pnpm@10.18.3",
+  "engines": {
+    "node": ">=20.19.0"
+  },
+  "scripts": {
+    "dev:frontend": "pnpm --filter mylife-frontend dev",
+    "build:frontend": "pnpm --filter mylife-frontend build",
+    "preview:frontend": "pnpm --filter mylife-frontend preview"
+  }
+}
