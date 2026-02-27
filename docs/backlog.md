@@ -21,8 +21,6 @@
   - 受け入れ条件: start/pause/resume/finish の状態遷移が永続化される
 - [ ] BL-005 (RQ-POM-003): タイマーUIを実装する
   - 受け入れ条件: UI操作で状態遷移できる
-- [ ] BL-006 (RQ-MEM-001, RQ-MEM-002): メモAPI/UIのCRUDを実装する
-  - 受け入れ条件: 作成・編集・閲覧・削除が可能
 - [ ] BL-007 (RQ-DIA-001, RQ-DIA-002): 日記API/UIを実装する
   - 受け入れ条件: 日付単位で作成・更新・閲覧が可能
 - [ ] BL-008 (RQ-EXP-001, RQ-EXP-002, RQ-EXP-003): エクスポートAPI/UIを実装する
@@ -35,7 +33,9 @@
   - 受け入れ条件: 公開クライアント向け設定で anon key を使わない
 
 ## In Progress
-- [ ] なし
+- [ ] BL-006 (RQ-MEM-001, RQ-MEM-002): メモAPI/UIのCRUDを実装する
+  - 受け入れ条件: 作成・編集・閲覧・削除が可能
+  - 実装メモ: APIテストの保守性向上のため、`monkeypatch` 中心から FastAPI `dependency_overrides` へ移行する（メモAPI・SupabaseヘルスAPI）
 
 ## Done
 - [x] BL-001 (RQ-OPS-002): Supabase接続確認APIを追加し、DB疎通を実証する

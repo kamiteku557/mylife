@@ -6,7 +6,7 @@ backend-sync:
 backend-dev:
 	cd apps/backend && uv run fastapi dev app/main.py --port 8000
 
-backend-lint:
+backend-lint: # backend-lint-ruff. (lintで引っかかった場合は、backend-formatで直せるものは直し、そうでないものは手動で修正すること)
 	cd apps/backend && uv run ruff check .
 
 backend-format:

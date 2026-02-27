@@ -1,14 +1,35 @@
+"""API tests for Supabase DB health handler using dependency overrides."""
+
+import pytest
 from app.main import app
+from app.supabase_health import get_supabase_health_service
 from fastapi.testclient import TestClient
 
 client = TestClient(app)
 
 
-def test_supabase_connection_success(monkeypatch):
-    monkeypatch.setattr(
-        "app.main.check_supabase_db_connection",
-        lambda: {"checked_table": "users", "row_count": 0, "total_count": 0},
-    )
+class FakeSupabaseHealthService:
+    """Test double for controlling Supabase health check results."""
+
+    def check(self) -> dict:
+        """Return successful health payload."""
+
+        return {"checked_table": "users", "row_count": 0, "total_count": 0}
+
+
+@pytest.fixture(autouse=True)
+def reset_dependency_overrides():
+    """Ensure dependency overrides do not leak across tests."""
+
+    app.dependency_overrides.clear()
+    yield
+    app.dependency_overrides.clear()
+
+
+def test_supabase_connection_success():
+    """GET health endpoint returns normalized success response."""
+
+    app.dependency_overrides[get_supabase_health_service] = FakeSupabaseHealthService
 
     response = client.get("/api/v1/ops/supabase-db-health")
 
@@ -22,11 +43,14 @@ def test_supabase_connection_success(monkeypatch):
     }
 
 
-def test_supabase_connection_missing_config(monkeypatch):
-    def raise_missing_config() -> None:
-        raise ValueError("missing config")
+def test_supabase_connection_missing_config():
+    """ValueError from service is translated to HTTP 503."""
 
-    monkeypatch.setattr("app.main.check_supabase_db_connection", raise_missing_config)
+    class MissingConfigService(FakeSupabaseHealthService):
+        def check(self) -> dict:
+            raise ValueError("missing config")
+
+    app.dependency_overrides[get_supabase_health_service] = MissingConfigService
 
     response = client.get("/api/v1/ops/supabase-db-health")
 
@@ -34,11 +58,14 @@ def test_supabase_connection_missing_config(monkeypatch):
     assert response.json() == {"detail": "missing config"}
 
 
-def test_supabase_connection_failure(monkeypatch):
-    def raise_connection_error() -> None:
-        raise RuntimeError("network error")
+def test_supabase_connection_failure():
+    """Unexpected service errors are translated to HTTP 502."""
 
-    monkeypatch.setattr("app.main.check_supabase_db_connection", raise_connection_error)
+    class FailingService(FakeSupabaseHealthService):
+        def check(self) -> dict:
+            raise RuntimeError("network error")
+
+    app.dependency_overrides[get_supabase_health_service] = FailingService
 
     response = client.get("/api/v1/ops/supabase-db-health")
 
