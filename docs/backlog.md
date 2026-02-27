@@ -31,13 +31,13 @@
   - 受け入れ条件: iPhone幅で主要画面が崩れない
 - [ ] BL-011 (RQ-OPS-007): Supabase公開クライアントキーをpublishable keyへ移行する
   - 受け入れ条件: 公開クライアント向け設定で anon key を使わない
-- [ ] BL-012 (RQ-MEM-005): メモ保存遅延の改善を行う
-  - 受け入れ条件: 初回保存時の遅延要因を計測し、改善策を適用して体感待ち時間を短縮する
 
 ## In Progress
 - [ ] なし
 
 ## Done
+- [x] BL-012 (RQ-MEM-005): メモ保存遅延の改善を行う
+  - 証跡: `apps/backend/app/memo_logs.py`, `apps/backend/tests/test_memo_logs_api.py`, `apps/backend/tests/test_supabase_connection_api.py`
 - [x] BL-006 (RQ-MEM-001, RQ-MEM-002): メモAPI/UIのCRUDを実装する
   - 証跡: `apps/backend/app/main.py`, `apps/backend/app/memo_logs.py`, `apps/backend/tests/test_memo_logs_api.py`, `apps/backend/tests/test_supabase_connection_api.py`, `apps/frontend/src/App.tsx`, `apps/frontend/src/styles.css`
 - [x] BL-001 (RQ-OPS-002): Supabase接続確認APIを追加し、DB疎通を実証する

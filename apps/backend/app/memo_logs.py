@@ -7,6 +7,7 @@ is available via RQ-OPS-004.
 from collections import defaultdict
 from collections.abc import Mapping
 from datetime import UTC, date, datetime
+from functools import lru_cache
 from typing import Any
 from uuid import UUID
 
@@ -116,8 +117,9 @@ def _parse_datetime(value: str | None) -> datetime:
     return datetime.fromisoformat(value.replace("Z", "+00:00"))
 
 
+@lru_cache(maxsize=1)
 def _get_client() -> Client:
-    """Create a Supabase client using service-role key when available."""
+    """Create and reuse a Supabase client using service-role key when available."""
 
     settings = get_settings()
     api_key = settings.supabase_service_role_key or settings.supabase_anon_key
@@ -134,6 +136,13 @@ def _ensure_demo_user(client: Client, user_id: str) -> None:
         {"id": user_id, "display_name": "Demo User"},
         on_conflict="id",
     ).execute()
+
+
+@lru_cache(maxsize=1)
+def _ensure_demo_user_once() -> None:
+    """Ensure the fixed demo user once per process to avoid per-request upsert latency."""
+
+    _ensure_demo_user(_get_client(), DEMO_USER_ID)
 
 
 def _memo_to_out(row: Mapping[str, Any], tags: list[str]) -> MemoLogOut:
@@ -211,7 +220,7 @@ def list_memo_logs() -> list[MemoLogOut]:
     """List all memo logs for the current user scope in descending date order."""
 
     client = _get_client()
-    _ensure_demo_user(client, DEMO_USER_ID)
+    _ensure_demo_user_once()
 
     response = (
         client.table("memo_logs")
@@ -233,7 +242,7 @@ def get_memo_log(memo_id: str) -> MemoLogOut:
     """Get one memo log by ID or raise ``MemoLogNotFoundError``."""
 
     client = _get_client()
-    _ensure_demo_user(client, DEMO_USER_ID)
+    _ensure_demo_user_once()
 
     response = (
         client.table("memo_logs")
@@ -255,7 +264,7 @@ def create_memo_log(payload: MemoLogCreate) -> MemoLogOut:
     """Create a memo log row and attach tag relations."""
 
     client = _get_client()
-    _ensure_demo_user(client, DEMO_USER_ID)
+    _ensure_demo_user_once()
 
     insert_payload = {
         "user_id": DEMO_USER_ID,
@@ -282,7 +291,7 @@ def update_memo_log(memo_id: str, payload: MemoLogUpdate) -> MemoLogOut:
     """Update a memo log and fully replace its tag relations."""
 
     client = _get_client()
-    _ensure_demo_user(client, DEMO_USER_ID)
+    _ensure_demo_user_once()
 
     update_payload = {
         "title": payload.title.strip(),
@@ -312,7 +321,7 @@ def delete_memo_log(memo_id: str) -> None:
     """Delete a memo log by ID or raise ``MemoLogNotFoundError`` when missing."""
 
     client = _get_client()
-    _ensure_demo_user(client, DEMO_USER_ID)
+    _ensure_demo_user_once()
 
     delete_response = (
         client.table("memo_logs").delete().eq("id", memo_id).eq("user_id", DEMO_USER_ID).execute()
