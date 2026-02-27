@@ -12,7 +12,11 @@ interface MemoLog {
   updated_at: string;
 }
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL?.trim() ?? "";
+const API_BASE_URL_ERROR =
+  API_BASE_URL.length > 0
+    ? ""
+    : "VITE_API_BASE_URL is not configured. Set frontend environment variable to backend URL.";
 
 /** カンマ区切りテキストを重複なしタグ配列へ変換する。 */
 function parseTagText(tagText: string): string[] {
@@ -142,6 +146,10 @@ function formatRelativeTime(iso: string): string {
 
 /** API JSON取得時に非2xxをErrorへ正規化する。 */
 async function fetchJson<T>(path: string, init?: RequestInit): Promise<T> {
+  if (!API_BASE_URL) {
+    throw new Error(API_BASE_URL_ERROR);
+  }
+
   const response = await fetch(`${API_BASE_URL}${path}`, {
     headers: {
       "Content-Type": "application/json",
@@ -171,8 +179,16 @@ export function App() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
+  const hasApiConfigError = API_BASE_URL_ERROR.length > 0;
 
   const refreshMemos = useCallback(async () => {
+    if (hasApiConfigError) {
+      // 設定不足時は通信を試行せず、原因を画面に明示する。
+      setLoading(false);
+      setError(API_BASE_URL_ERROR);
+      return;
+    }
+
     setLoading(true);
     setError("");
     try {
@@ -184,7 +200,7 @@ export function App() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [hasApiConfigError]);
 
   useEffect(() => {
     void refreshMemos();
@@ -375,7 +391,12 @@ export function App() {
             <span className="menu-tab">Session</span>
           </nav>
 
-          <button type="button" className="refresh-btn" onClick={() => void refreshMemos()}>
+          <button
+            type="button"
+            className="refresh-btn"
+            onClick={() => void refreshMemos()}
+            disabled={hasApiConfigError}
+          >
             再読込
           </button>
         </div>

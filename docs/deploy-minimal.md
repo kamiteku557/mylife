@@ -35,6 +35,7 @@
 
 3. 環境変数を設定
 - `VITE_API_BASE_URL=https://<render-app>.onrender.com`
+- `VITE_API_BASE_URL` 未設定時は Frontend がフェイルファストし、`localhost` へのフォールバックは行わない
 
 4. デプロイ後、ページ表示を確認
 - `Backend health` に `status: ok` が表示される
