@@ -7,6 +7,12 @@ Single-user full-stack app for Pomodoro, memo logs, and diary.
 - `apps/backend`: FastAPI (uv managed)
 - `docs`: specs and planning docs
 
+## Spec-driven docs
+- Requirements checklist (source of truth): `docs/requirements.md`
+- Execution backlog (Ready/In Progress/Done): `docs/backlog.md`
+- Development workflow (spec-driven): `docs/development-workflow.md`
+- Product spec: `docs/spec.md`
+
 ## Tooling policy (modern baseline)
 - Frontend package manager: pnpm (via Corepack)
 - Backend Python workflow: uv (`uv sync`, `uv run`)

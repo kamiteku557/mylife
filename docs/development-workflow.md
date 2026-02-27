@@ -1,0 +1,58 @@
+# 仕様駆動開発ワークフロー
+
+最終更新: 2026-02-27
+
+## 目的
+- ドキュメントを常に最新に保つ
+- 要件一覧と実装状況を常に一致させる
+- タスク単位で安全に実装し、完了条件を明確化する
+
+## 基本原則
+1. 実装より先に仕様を更新する。
+2. すべての実装タスクは要件ID（`RQ-*`）に紐づける。
+3. 完了判定はコードではなく「受け入れ条件」で行う。
+4. `Done` の更新は、マージ後に必ず行う。
+
+## 1サイクルの流れ
+1. 要件更新
+- 変更要求を `docs/requirements.md` に追記/更新する。
+- 新規要件には `RQ-*` ID を付与する。
+
+2. タスク化
+- `docs/backlog.md` の `Ready` に `BL-*` を追加する。
+- 受け入れ条件を1行で明確にする。
+
+3. ブランチ作成（必要に応じて worktree）
+- ブランチ名: `codex/<BL-ID>-<short-name>`
+- 例: `codex/BL-003-pomodoro-settings-api`
+- worktree を使う場合:
+```bash
+git worktree add ../mylife-BL-003 -b codex/BL-003-pomodoro-settings-api
+```
+
+4. 実装
+- `In Progress` へ移動して実装する。
+- 仕様変更が出たら先にドキュメントを更新してからコードを直す。
+
+5. 受け入れ確認
+- `lint/test/manual` で受け入れ条件を満たすことを確認する。
+- 満たさない場合は `Done` にしない。
+
+6. 仕上げ
+- 変更内容をコミットする（要件ID/タスクIDを含める）。
+- `main` にマージする。
+- `docs/backlog.md` を更新（`In Progress` -> `Done`）。
+- `docs/requirements.md` の該当要件を `[x]` にする。
+- 残タスクと新タスクを `Ready` に追加する。
+
+## 完了時チェックリスト（PR/マージ前）
+- [ ] 要件IDとタスクIDが明記されている
+- [ ] 受け入れ条件を満たす証跡がある
+- [ ] `docs/requirements.md` の状態が更新済み
+- [ ] `docs/backlog.md` の状態が更新済み
+- [ ] 追加で発生した新タスクが `Ready` に登録済み
+
+## コミットメッセージ例
+- `feat(pomodoro): implement settings API (BL-003, RQ-POM-001)`
+- `fix(auth): protect pomodoro endpoints (BL-002, RQ-OPS-004)`
+- `docs(backlog): mark BL-003 done and update next tasks`
