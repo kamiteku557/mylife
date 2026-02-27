@@ -42,12 +42,10 @@
   - 受け入れ条件: 作成フォーム、タグ入力、時系列一覧、編集/削除操作をモック同等の画面機能で提供する
   - 追加観点: 余白・配色・タイポグラフィ・アイコン操作をモックスクリーンショットと同等に調整する
   - 影響範囲: frontend/docs
-- [ ] BL-016 (RQ-OPS-009): Frontend の API ベースURL未設定時にフェイルファストする
-  - 背景: デプロイ先で `VITE_API_BASE_URL` が未設定だと `localhost` フォールバックで原因特定が難しい
-  - 受け入れ条件: `VITE_API_BASE_URL` が未設定/空文字のとき、設定不足を明示し、APIリクエストを実行しない
-  - 影響範囲: frontend/docs
 
 ## Done
+- [x] BL-016 (RQ-OPS-009): Frontend の API ベースURL未設定時にフェイルファストする
+  - 証跡: `apps/frontend/src/App.tsx`, `apps/frontend/src/styles.css`, `docs/deploy-minimal.md`
 - [x] BL-013 (RQ-DOC-001): Docstring とコードコメントの記述ルール整備と既存実装の準拠対応
   - 証跡: `AGENTS.md`, `apps/backend/app/main.py`, `apps/backend/app/memo_logs.py`, `apps/backend/app/supabase_health.py`, `apps/backend/tests/test_memo_logs_api.py`, `apps/backend/tests/test_supabase_connection_api.py`, `apps/frontend/src/App.tsx`
 - [x] BL-012 (RQ-MEM-005): メモ保存遅延の改善を行う
