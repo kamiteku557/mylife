@@ -3,8 +3,21 @@
 
 create extension if not exists "pgcrypto";
 
-create type if not exists public.pomodoro_session_type as enum ('focus', 'short_break', 'long_break');
-create type if not exists public.pomodoro_session_status as enum ('running', 'paused', 'completed', 'cancelled');
+do $$
+begin
+  if to_regtype('public.pomodoro_session_type') is null then
+    create type public.pomodoro_session_type as enum ('focus', 'short_break', 'long_break');
+  end if;
+end
+$$;
+
+do $$
+begin
+  if to_regtype('public.pomodoro_session_status') is null then
+    create type public.pomodoro_session_status as enum ('running', 'paused', 'completed', 'cancelled');
+  end if;
+end
+$$;
 
 create table if not exists public.users (
   id uuid primary key default gen_random_uuid(),
