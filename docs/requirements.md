@@ -1,6 +1,6 @@
 # mylife 要件一覧（チェック管理）
 
-最終更新: 2026-02-27
+最終更新: 2026-02-28
 
 ## 使い方
 - このファイルを「要件の正本」とする。
@@ -47,15 +47,18 @@
   - 証跡: `Makefile`, `package.json`, `README.md`
 
 ## B. MVP機能要件
-- [ ] RQ-POM-001: ポモドーロ設定（取得/更新）ができる
+- [x] RQ-POM-001: ポモドーロ設定（取得/更新）ができる
   - 受け入れ条件: focus/short/long/long_break_every を保存・取得できる
-  - 証跡: 未記入
-- [ ] RQ-POM-002: ポモドーロ開始/停止/再開/終了ができる
+  - 対応タスク: BL-003
+  - 証跡: `apps/backend/app/pomodoro.py`, `apps/backend/app/main.py`, `apps/backend/tests/test_pomodoro_api.py`, `apps/frontend/src/App.tsx`, `docs/backlog.md`
+- [x] RQ-POM-002: ポモドーロ開始/停止/再開/終了ができる
   - 受け入れ条件: running/paused/completed/cancelled が正しく永続化される
-  - 証跡: 未記入
-- [ ] RQ-POM-003: タイマーUIで状態遷移できる
+  - 対応タスク: BL-004
+  - 証跡: `apps/backend/app/pomodoro.py`, `apps/backend/app/main.py`, `apps/backend/tests/test_pomodoro_api.py`, `apps/frontend/src/SessionView.tsx`, `docs/backlog.md`
+- [x] RQ-POM-003: タイマーUIで状態遷移できる
   - 受け入れ条件: 作業/休憩の遷移と開始・一時停止・再開・終了が可能
-  - 証跡: 未記入
+  - 対応タスク: BL-005
+  - 証跡: `apps/frontend/src/App.tsx`, `apps/frontend/src/SessionView.tsx`, `apps/frontend/src/styles.css`, `docs/backlog.md`
 - [ ] RQ-POM-004: ポモドーロ集計（日/週/月）が見られる
   - 受け入れ条件: APIとUIで期間別集計を表示できる
   - 証跡: 未記入

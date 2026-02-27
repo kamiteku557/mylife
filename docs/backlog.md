@@ -1,6 +1,6 @@
 # mylife 実行バックログ
 
-最終更新: 2026-02-27
+最終更新: 2026-02-28
 
 このファイルは「次に実装するタスク」の管理用。  
 要件の正本は `docs/requirements.md`。
@@ -15,12 +15,13 @@
 ## Ready
 - [ ] BL-002 (RQ-OPS-004): Supabase Auth によるAPI保護を実装する
   - 受け入れ条件: 未認証で主要APIにアクセスできない
-- [ ] BL-003 (RQ-POM-001): ポモドーロ設定API（GET/PUT）を実装する
-  - 受け入れ条件: 設定値を保存・取得できる
-- [ ] BL-004 (RQ-POM-002): ポモドーロセッション制御APIを実装する
-  - 受け入れ条件: start/pause/resume/finish の状態遷移が永続化される
-- [ ] BL-005 (RQ-POM-003): タイマーUIを実装する
-  - 受け入れ条件: UI操作で状態遷移できる
+- [ ] BL-020 (RQ-POM-003): セッションUIの応答性改善（楽観更新 + refresh最小化）を実装する
+  - 背景: API往復待ちで操作体感が鈍るケースがあり、連続操作時の安定性も高めたい
+  - 受け入れ条件: 主要操作でUI先行反映しつつ、refresh API呼び出し回数を最小化して整合性を維持できる
+- [ ] BL-022 (RQ-POM-003): タイマー終了後の超過計測と開始前時間調整を実装する
+  - 背景: 終了後も同一セッションで継続作業したいケースと、開始前の時間微調整ニーズがある
+  - 受け入れ条件: 00:00 到達後は超過時間を計測し、自動で次セッションへ遷移しない
+  - 受け入れ条件: セッション開始前に表示時間をクリックしてそのセッション時間を変更できる
 - [ ] BL-007 (RQ-DIA-001, RQ-DIA-002): 日記API/UIを実装する
   - 受け入れ条件: 日付単位で作成・更新・閲覧が可能
 - [ ] BL-008 (RQ-EXP-001, RQ-EXP-002, RQ-EXP-003): エクスポートAPI/UIを実装する
@@ -44,6 +45,14 @@
   - 影響範囲: frontend/docs
 
 ## Done
+- [x] BL-019 (RQ-POM-003): セッション遷移と編集中UXの不具合を修正する
+  - 証跡: `apps/frontend/src/SessionView.tsx`, `apps/frontend/src/styles.css`, `apps/backend/app/pomodoro.py`, `apps/backend/app/main.py`, `apps/backend/tests/test_pomodoro_api.py`
+- [x] BL-004 (RQ-POM-002): ポモドーロセッション制御APIを実装する
+  - 証跡: `apps/backend/app/pomodoro.py`, `apps/backend/app/main.py`, `apps/backend/tests/test_pomodoro_api.py`, `apps/frontend/src/SessionView.tsx`, `docs/requirements.md`
+- [x] BL-003 (RQ-POM-001): ポモドーロ設定API（GET/PUT）を実装する
+  - 証跡: `apps/backend/app/pomodoro.py`, `apps/backend/app/main.py`, `apps/backend/tests/test_pomodoro_api.py`, `apps/frontend/src/App.tsx`, `docs/requirements.md`
+- [x] BL-005 (RQ-POM-003): タイマーUIを実装する
+  - 証跡: `apps/frontend/src/App.tsx`, `apps/frontend/src/SessionView.tsx`, `apps/frontend/src/styles.css`, `docs/requirements.md`
 - [x] BL-018 (RQ-OPS-010): Frontend/Backend の同時起動コマンドを追加する
   - 証跡: `Makefile`, `package.json`, `README.md`, `docs/requirements.md`
 - [x] BL-017 (RQ-MEM-007, RQ-SET-001): 設定画面を追加しメモログ表示設定を実装する

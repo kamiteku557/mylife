@@ -12,12 +12,26 @@ from app.memo_logs import (
     MemoLogUpdate,
     get_memo_log_service,
 )
+from app.pomodoro import (
+    PomodoroService,
+    PomodoroSessionNotFoundError,
+    PomodoroSessionOut,
+    PomodoroSessionStart,
+    PomodoroSessionStateError,
+    PomodoroSessionUpdate,
+    PomodoroSettingsOut,
+    PomodoroSettingsUpdate,
+    PomodoroSummaryOut,
+    SummaryGroupBy,
+    get_pomodoro_service,
+)
 from app.supabase_health import SupabaseHealthService, get_supabase_health_service
 
 settings = get_settings()
 app = FastAPI(title=settings.app_name)
 memo_log_service_dep = Depends(get_memo_log_service)
 supabase_health_service_dep = Depends(get_supabase_health_service)
+pomodoro_service_dep = Depends(get_pomodoro_service)
 
 app.add_middleware(
     CORSMiddleware,
@@ -138,3 +152,201 @@ def memo_logs_delete(memo_id: str, service: MemoLogService = memo_log_service_de
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception as exc:
         raise HTTPException(status_code=502, detail=f"Failed to delete memo log: {exc}") from exc
+
+
+@app.get("/api/v1/settings/pomodoro", response_model=PomodoroSettingsOut)
+def pomodoro_settings_get(
+    service: PomodoroService = pomodoro_service_dep,
+) -> PomodoroSettingsOut:
+    """現在のユーザースコープでポモドーロ設定を取得する。"""
+
+    try:
+        return service.get_settings()
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(
+            status_code=502,
+            detail=f"Failed to get pomodoro settings: {exc}",
+        ) from exc
+
+
+@app.put("/api/v1/settings/pomodoro", response_model=PomodoroSettingsOut)
+def pomodoro_settings_update(
+    payload: PomodoroSettingsUpdate,
+    service: PomodoroService = pomodoro_service_dep,
+) -> PomodoroSettingsOut:
+    """現在のユーザースコープでポモドーロ設定を更新する。"""
+
+    try:
+        return service.update_settings(payload)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(
+            status_code=502, detail=f"Failed to update pomodoro settings: {exc}"
+        ) from exc
+
+
+@app.get("/api/v1/pomodoro/current", response_model=PomodoroSessionOut | None)
+def pomodoro_current(service: PomodoroService = pomodoro_service_dep) -> PomodoroSessionOut | None:
+    """実行中または一時停止中のポモドーロセッションを返す。"""
+
+    try:
+        return service.get_current()
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(
+            status_code=502,
+            detail=f"Failed to get current pomodoro: {exc}",
+        ) from exc
+
+
+@app.get("/api/v1/pomodoro/sessions", response_model=list[PomodoroSessionOut])
+def pomodoro_sessions_list(
+    limit: int = 100,
+    service: PomodoroService = pomodoro_service_dep,
+) -> list[PomodoroSessionOut]:
+    """ポモドーロセッション履歴を返す。"""
+
+    try:
+        return service.list_sessions(limit=limit)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(
+            status_code=502,
+            detail=f"Failed to list pomodoro sessions: {exc}",
+        ) from exc
+
+
+@app.get("/api/v1/pomodoro/summary", response_model=list[PomodoroSummaryOut])
+def pomodoro_summary(
+    group_by: SummaryGroupBy = "day",
+    service: PomodoroService = pomodoro_service_dep,
+) -> list[PomodoroSummaryOut]:
+    """完了済み focus セッション集計を返す。"""
+
+    try:
+        return service.summary(group_by=group_by)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(
+            status_code=502,
+            detail=f"Failed to get pomodoro summary: {exc}",
+        ) from exc
+
+
+@app.post("/api/v1/pomodoro/start", response_model=PomodoroSessionOut, status_code=201)
+def pomodoro_start(
+    payload: PomodoroSessionStart,
+    service: PomodoroService = pomodoro_service_dep,
+) -> PomodoroSessionOut:
+    """ポモドーロセッションを開始する。"""
+
+    try:
+        return service.start(payload)
+    except PomodoroSessionStateError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=f"Failed to start pomodoro: {exc}") from exc
+
+
+@app.post("/api/v1/pomodoro/{session_id}/pause", response_model=PomodoroSessionOut)
+def pomodoro_pause(
+    session_id: str,
+    service: PomodoroService = pomodoro_service_dep,
+) -> PomodoroSessionOut:
+    """ポモドーロセッションを一時停止する。"""
+
+    try:
+        return service.pause(session_id)
+    except PomodoroSessionNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except PomodoroSessionStateError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=f"Failed to pause pomodoro: {exc}") from exc
+
+
+@app.put("/api/v1/pomodoro/{session_id}", response_model=PomodoroSessionOut)
+def pomodoro_update(
+    session_id: str,
+    payload: PomodoroSessionUpdate,
+    service: PomodoroService = pomodoro_service_dep,
+) -> PomodoroSessionOut:
+    """実行中または一時停止中セッションのタイトル/タグを更新する。"""
+
+    try:
+        return service.update_session(session_id, payload)
+    except PomodoroSessionNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except PomodoroSessionStateError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=f"Failed to update pomodoro: {exc}") from exc
+
+
+@app.post("/api/v1/pomodoro/{session_id}/resume", response_model=PomodoroSessionOut)
+def pomodoro_resume(
+    session_id: str,
+    service: PomodoroService = pomodoro_service_dep,
+) -> PomodoroSessionOut:
+    """ポモドーロセッションを再開する。"""
+
+    try:
+        return service.resume(session_id)
+    except PomodoroSessionNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except PomodoroSessionStateError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=f"Failed to resume pomodoro: {exc}") from exc
+
+
+@app.post("/api/v1/pomodoro/{session_id}/finish", response_model=PomodoroSessionOut)
+def pomodoro_finish(
+    session_id: str,
+    service: PomodoroService = pomodoro_service_dep,
+) -> PomodoroSessionOut:
+    """ポモドーロセッションを完了する。"""
+
+    try:
+        return service.finish(session_id)
+    except PomodoroSessionNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except PomodoroSessionStateError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=f"Failed to finish pomodoro: {exc}") from exc
+
+
+@app.post("/api/v1/pomodoro/{session_id}/cancel", response_model=PomodoroSessionOut)
+def pomodoro_cancel(
+    session_id: str,
+    service: PomodoroService = pomodoro_service_dep,
+) -> PomodoroSessionOut:
+    """ポモドーロセッションをキャンセルする。"""
+
+    try:
+        return service.cancel(session_id)
+    except PomodoroSessionNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except PomodoroSessionStateError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=f"Failed to cancel pomodoro: {exc}") from exc

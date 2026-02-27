@@ -32,3 +32,6 @@ apps/backend/.env
 
 # Logs
 *.log
+
+# tmp
+develop_assets

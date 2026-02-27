@@ -7,6 +7,7 @@ import {
   useMemo,
   useState,
 } from "react";
+import { SessionView } from "./SessionView";
 
 interface MemoLog {
   id: string;
@@ -23,6 +24,13 @@ interface MemoLog {
 interface AppSettings {
   memoDisplayCount: number;
   memoFontSizePx: number;
+}
+
+interface PomodoroSettings {
+  focus_minutes: number;
+  short_break_minutes: number;
+  long_break_minutes: number;
+  long_break_every: number;
 }
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL?.trim() ?? "";
@@ -253,6 +261,9 @@ export function App() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [settingsNotice, setSettingsNotice] = useState("");
+  const [pomodoroSettings, setPomodoroSettings] = useState<PomodoroSettings | null>(null);
+  const [pomodoroSettingsDraft, setPomodoroSettingsDraft] = useState<PomodoroSettings | null>(null);
+  const [pomodoroSettingsSaving, setPomodoroSettingsSaving] = useState(false);
   const hasApiConfigError = API_BASE_URL_ERROR.length > 0;
 
   useEffect(() => {
@@ -283,6 +294,26 @@ export function App() {
   useEffect(() => {
     void refreshMemos();
   }, [refreshMemos]);
+
+  useEffect(() => {
+    if (hasApiConfigError) {
+      return;
+    }
+    const loadPomodoroSettings = async () => {
+      try {
+        const fetched = await fetchJson<PomodoroSettings>("/api/v1/settings/pomodoro");
+        setPomodoroSettings(fetched);
+        setPomodoroSettingsDraft(fetched);
+      } catch (eventualError) {
+        setError(
+          eventualError instanceof Error
+            ? eventualError.message
+            : "failed to load pomodoro settings",
+        );
+      }
+    };
+    void loadPomodoroSettings();
+  }, [hasApiConfigError]);
 
   const addComposerTag = useCallback(() => {
     const tags = parseTagText(composerTagInput).filter((tag) => !composerTags.includes(tag));
@@ -479,6 +510,52 @@ export function App() {
     setSettings(getDefaultSettings());
     setSettingsNotice("設定を初期値に戻しました。");
   }, []);
+
+  const handlePomodoroSettingChange = useCallback(
+    (field: keyof PomodoroSettings, value: string) => {
+      const numeric = Number(value);
+      if (!Number.isFinite(numeric)) {
+        return;
+      }
+      setPomodoroSettingsDraft((prev) => {
+        if (!prev) {
+          return prev;
+        }
+        return { ...prev, [field]: Math.max(1, Math.round(numeric)) };
+      });
+      setSettingsNotice("");
+    },
+    [],
+  );
+
+  const handleSavePomodoroSettings = useCallback(async () => {
+    if (!pomodoroSettingsDraft || hasApiConfigError) {
+      return;
+    }
+    setPomodoroSettingsSaving(true);
+    setSettingsNotice("");
+    try {
+      const payload = {
+        focus_minutes: clampInt(pomodoroSettingsDraft.focus_minutes, 1, 180),
+        short_break_minutes: clampInt(pomodoroSettingsDraft.short_break_minutes, 1, 60),
+        long_break_minutes: clampInt(pomodoroSettingsDraft.long_break_minutes, 1, 120),
+        long_break_every: clampInt(pomodoroSettingsDraft.long_break_every, 2, 12),
+      };
+      const updated = await fetchJson<PomodoroSettings>("/api/v1/settings/pomodoro", {
+        method: "PUT",
+        body: JSON.stringify(payload),
+      });
+      setPomodoroSettings(updated);
+      setPomodoroSettingsDraft(updated);
+      setSettingsNotice("セッション設定を保存しました。");
+    } catch (eventualError) {
+      setError(
+        eventualError instanceof Error ? eventualError.message : "failed to save pomodoro settings",
+      );
+    } finally {
+      setPomodoroSettingsSaving(false);
+    }
+  }, [hasApiConfigError, pomodoroSettingsDraft]);
   const contentStyle = {
     [MEMO_FONT_SIZE_CSS_VAR]: `${settings.memoFontSizePx}px`,
   } as CSSProperties;
@@ -717,12 +794,13 @@ export function App() {
           </>
         ) : null}
 
-        {activeView === "session" ? (
-          <section className="settings-panel" aria-label="Session view">
-            <h1 className="settings-title">Session</h1>
-            <p className="settings-note">セッション画面は次のタスクで実装予定です。</p>
-          </section>
-        ) : null}
+        <section
+          className="session-tab-panel"
+          aria-label="Session view"
+          hidden={activeView !== "session"}
+        >
+          <SessionView settings={pomodoroSettings} />
+        </section>
 
         {activeView === "settings" ? (
           <section className="settings-panel" aria-label="Settings">
@@ -757,9 +835,74 @@ export function App() {
 
             <section className="settings-card" aria-label="Session settings">
               <h2>Session</h2>
-              <p className="settings-note">
-                セッション関連の詳細設定は、セッション機能実装タスクで順次追加します。
-              </p>
+              {pomodoroSettingsDraft ? (
+                <>
+                  <label className="settings-field" htmlFor="focus-minutes">
+                    <span>Focus minutes</span>
+                    <input
+                      id="focus-minutes"
+                      type="number"
+                      min={1}
+                      max={180}
+                      value={pomodoroSettingsDraft.focus_minutes}
+                      onChange={(event) =>
+                        handlePomodoroSettingChange("focus_minutes", event.target.value)
+                      }
+                    />
+                  </label>
+                  <label className="settings-field" htmlFor="short-break-minutes">
+                    <span>Short break minutes</span>
+                    <input
+                      id="short-break-minutes"
+                      type="number"
+                      min={1}
+                      max={60}
+                      value={pomodoroSettingsDraft.short_break_minutes}
+                      onChange={(event) =>
+                        handlePomodoroSettingChange("short_break_minutes", event.target.value)
+                      }
+                    />
+                  </label>
+                  <label className="settings-field" htmlFor="long-break-minutes">
+                    <span>Long break minutes</span>
+                    <input
+                      id="long-break-minutes"
+                      type="number"
+                      min={1}
+                      max={120}
+                      value={pomodoroSettingsDraft.long_break_minutes}
+                      onChange={(event) =>
+                        handlePomodoroSettingChange("long_break_minutes", event.target.value)
+                      }
+                    />
+                  </label>
+                  <label className="settings-field" htmlFor="long-break-every">
+                    <span>Long break every</span>
+                    <input
+                      id="long-break-every"
+                      type="number"
+                      min={2}
+                      max={12}
+                      value={pomodoroSettingsDraft.long_break_every}
+                      onChange={(event) =>
+                        handlePomodoroSettingChange("long_break_every", event.target.value)
+                      }
+                    />
+                  </label>
+                  <div className="settings-actions">
+                    <button
+                      type="button"
+                      className="save-btn"
+                      onClick={() => void handleSavePomodoroSettings()}
+                      disabled={pomodoroSettingsSaving}
+                    >
+                      Session設定を保存
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <p className="settings-note">Loading session settings...</p>
+              )}
             </section>
 
             <div className="settings-actions">
