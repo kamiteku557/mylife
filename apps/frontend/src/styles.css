@@ -1,8 +1,10 @@
 :root {
-  font-family: "Hiragino Sans", "Noto Sans JP", sans-serif;
+  font-family: "Avenir Next", "Hiragino Sans", "Noto Sans JP", sans-serif;
   line-height: 1.5;
-  color: #1f2937;
-  background: radial-gradient(circle at 10% 20%, #fef3c7 0%, #e2e8f0 45%, #f8fafc 100%);
+  color: #1e293b;
+  background:
+    radial-gradient(circle at 5% 0%, #f8d9a0 0%, rgba(248, 217, 160, 0.2) 32%, transparent 46%),
+    linear-gradient(160deg, #f9fafb 0%, #eef2ff 45%, #ecfeff 100%);
 }
 
 * {
@@ -20,165 +22,381 @@ textarea {
   font: inherit;
 }
 
-.app {
-  max-width: 1100px;
-  margin: 0 auto;
-  padding: 24px 16px 40px;
+a {
+  color: #0f766e;
 }
 
-.hero {
-  margin-bottom: 16px;
+kbd {
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  padding: 1px 6px;
+  background: #f8fafc;
+  font-family: "SFMono-Regular", "Consolas", monospace;
+  font-size: 11px;
 }
 
-.hero h1 {
-  margin: 0;
-  font-size: 2rem;
+.memo-page {
+  min-height: 100vh;
 }
 
-.hero p {
-  margin: 8px 0 0;
-}
-
-.workspace {
-  display: grid;
-  grid-template-columns: 1.2fr 1fr;
-  gap: 16px;
-}
-
-.card {
-  border: 1px solid #cbd5e1;
-  border-radius: 14px;
-  padding: 16px;
+.top-nav {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.35);
   background: rgba(255, 255, 255, 0.85);
-  backdrop-filter: blur(8px);
+  backdrop-filter: blur(10px);
 }
 
-.card-head {
+.top-nav-inner {
+  max-width: 820px;
+  margin: 0 auto;
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.brand-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  background: #fdf2d8;
+  color: #9a6700;
+  font-size: 13px;
+}
+
+.brand-name {
+  font-size: 1.08rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+.nav-tabs {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.nav-tab {
+  border-radius: 8px;
+  padding: 7px 12px;
+  font-size: 0.89rem;
+  font-weight: 500;
+}
+
+.nav-tab.active {
+  background: #e2e8f0;
+}
+
+.nav-tab.muted {
+  color: #64748b;
+}
+
+.content-wrap {
+  max-width: 820px;
+  margin: 0 auto;
+  padding: 20px 16px 56px;
+}
+
+.composer-card {
+  border: 1px solid #d7e0ec;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.82);
+  box-shadow: 0 14px 42px rgba(15, 23, 42, 0.08);
+  padding: 16px;
+}
+
+.composer-input,
+.edit-input {
+  width: 100%;
+  resize: vertical;
+  border: none;
+  border-radius: 10px;
+  padding: 0;
+  background: transparent;
+  color: #0f172a;
+  line-height: 1.72;
+}
+
+.composer-input:focus,
+.edit-input:focus,
+.tag-input:focus {
+  outline: none;
+}
+
+.composer-input::placeholder,
+.tag-input::placeholder {
+  color: #94a3b8;
+}
+
+.tag-editor {
+  margin-top: 14px;
+  border-top: 1px solid #e2e8f0;
+  padding-top: 14px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.tag-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border-radius: 999px;
+  border: 1px solid #dbe3ee;
+  background: #eff6ff;
+  color: #1e3a8a;
+  font-size: 0.8rem;
+  padding: 3px 10px;
+}
+
+.tag-chip.outline {
+  border-color: #d1d5db;
+  background: transparent;
+  color: #475569;
+}
+
+.hash {
+  color: #64748b;
+}
+
+.icon-btn {
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  padding: 0 3px;
+}
+
+.tag-input-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 2px;
+}
+
+.plus {
+  color: #64748b;
+  font-size: 0.9rem;
+}
+
+.tag-input {
+  min-width: 90px;
+  border: none;
+  background: transparent;
+  color: #0f172a;
+  font-size: 0.86rem;
+}
+
+.composer-footer {
+  margin-top: 14px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
 }
 
-.card-head h2 {
+.hint {
   margin: 0;
+  color: #64748b;
+  font-size: 0.76rem;
 }
 
-.memo-form {
-  display: grid;
-  gap: 12px;
-  margin-top: 12px;
-}
-
-.memo-form label {
-  display: grid;
-  gap: 6px;
-}
-
-.memo-form input,
-.memo-form textarea {
-  width: 100%;
-  border: 1px solid #94a3b8;
+.primary-btn {
+  border: 1px solid #0f172a;
   border-radius: 10px;
-  padding: 8px 10px;
-  background: #ffffff;
-}
-
-.memo-form button {
-  border: 1px solid #111827;
-  border-radius: 10px;
-  padding: 10px 12px;
   background: #0f172a;
   color: #f8fafc;
   cursor: pointer;
-}
-
-.ghost-btn {
-  border: 1px solid #94a3b8;
-  background: #f8fafc;
-  color: #0f172a;
-  border-radius: 10px;
-  padding: 6px 10px;
-  cursor: pointer;
-}
-
-.ghost-btn.danger {
-  border-color: #ef4444;
-  color: #b91c1c;
-}
-
-.memo-list {
-  list-style: none;
-  margin: 12px 0 0;
-  padding: 0;
-  display: grid;
-  gap: 10px;
-}
-
-.memo-list li {
-  border: 1px solid #cbd5e1;
-  border-radius: 10px;
-  padding: 8px;
-  background: #ffffff;
-}
-
-.memo-list li.selected {
-  border-color: #0f172a;
-}
-
-.memo-item {
-  all: unset;
-  cursor: pointer;
-  display: flex;
-  justify-content: space-between;
-  width: 100%;
-  gap: 12px;
-}
-
-.memo-item strong,
-.memo-item span {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.row-actions {
-  margin-top: 8px;
-  display: flex;
-  gap: 8px;
-}
-
-.detail-card {
-  margin-top: 16px;
-}
-
-.detail-card h3 {
-  margin-bottom: 8px;
-}
-
-.meta {
-  margin: 0 0 6px;
-  color: #475569;
-  font-size: 0.9rem;
-}
-
-.error {
-  margin-top: 12px;
-  color: #b91c1c;
+  padding: 7px 13px;
   font-weight: 600;
 }
 
-pre {
-  background: #f1f5f9;
-  border: 1px solid #cbd5e1;
-  border-radius: 10px;
-  padding: 12px;
-  overflow-x: auto;
-  white-space: pre-wrap;
+.primary-btn:disabled {
+  opacity: 0.6;
+  cursor: default;
 }
 
-@media (max-width: 900px) {
-  .workspace {
-    grid-template-columns: 1fr;
+.ghost-btn {
+  border: 1px solid #d1d9e6;
+  border-radius: 10px;
+  background: #ffffff;
+  color: #334155;
+  cursor: pointer;
+  padding: 6px 10px;
+}
+
+.ghost-btn:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+
+.ghost-btn.danger {
+  border-color: #fecaca;
+  color: #b91c1c;
+}
+
+.error-banner {
+  margin: 14px 0 0;
+  border: 1px solid #fecaca;
+  border-radius: 10px;
+  background: #fef2f2;
+  color: #991b1b;
+  padding: 10px 12px;
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+.loading {
+  margin: 24px 0;
+  color: #64748b;
+}
+
+.empty-state {
+  padding: 44px 12px;
+  text-align: center;
+}
+
+.empty-title {
+  margin: 0;
+  font-size: 1.05rem;
+  color: #334155;
+}
+
+.empty-note {
+  margin: 6px 0 0;
+  font-size: 0.88rem;
+  color: #94a3b8;
+}
+
+.day-group {
+  margin-top: 28px;
+}
+
+.day-header {
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.day-label {
+  font-size: 0.73rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #64748b;
+  font-weight: 700;
+}
+
+.day-summary {
+  font-size: 0.76rem;
+  color: #94a3b8;
+}
+
+.memo-card {
+  border-bottom: 1px solid #e2e8f0;
+  padding: 16px 0;
+}
+
+.memo-body {
+  color: #1f2937;
+  line-height: 1.78;
+  font-size: 1rem;
+  word-break: break-word;
+}
+
+.memo-body p {
+  margin: 0;
+}
+
+.memo-body strong {
+  font-weight: 700;
+}
+
+.memo-body em {
+  font-style: italic;
+}
+
+.inline-code {
+  border-radius: 6px;
+  background: #e2e8f0;
+  padding: 1px 5px;
+  font-size: 0.83rem;
+  font-family: "SFMono-Regular", "Consolas", monospace;
+}
+
+.memo-footer {
+  margin-top: 10px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.memo-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.memo-meta {
+  color: #94a3b8;
+  font-size: 0.74rem;
+  white-space: nowrap;
+}
+
+.row-actions {
+  margin-top: 10px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.edit-input {
+  border: 1px solid #d7e0ec;
+  border-radius: 10px;
+  background: #ffffff;
+  padding: 10px 11px;
+  min-height: 120px;
+}
+
+@media (max-width: 700px) {
+  .top-nav-inner {
+    padding: 10px 12px;
+  }
+
+  .content-wrap {
+    padding: 14px 12px 44px;
+  }
+
+  .composer-card {
+    padding: 12px;
+  }
+
+  .memo-footer {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .memo-meta {
+    white-space: normal;
+  }
+
+  .nav-tabs {
+    display: none;
   }
 }
