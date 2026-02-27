@@ -27,27 +27,44 @@ Single-user full-stack app for Pomodoro, memo logs, and diary.
 - uv installed (Astral uv)
 - Python 3.11+
 
-### 1. Backend (FastAPI)
+### 1. Setup env files
 ```bash
+cp apps/frontend/.env.example apps/frontend/.env
 cd apps/backend
 cp .env.example .env
-uv sync
-uv run fastapi dev app/main.py --port 8000
+cd ../..
 ```
+
+### 2. Install dependencies
+```bash
+pnpm install
+cd apps/backend && uv sync
+cd ../..
+```
+
+### 3. Start frontend + backend together (recommended)
+```bash
+pnpm dev
+```
+
+Open [http://localhost:5173](http://localhost:5173)
 
 Health check:
 ```bash
 curl http://localhost:8000/api/v1/health
 ```
 
-### 2. Frontend (React)
+### 4. Start each service separately (optional)
+Backend (FastAPI):
 ```bash
-cp apps/frontend/.env.example apps/frontend/.env
-pnpm install
-pnpm --filter mylife-frontend dev
+cd apps/backend
+uv run fastapi dev app/main.py --port 8000
 ```
 
-Open [http://localhost:5173](http://localhost:5173)
+Frontend (React):
+```bash
+pnpm --filter mylife-frontend dev
+```
 
 ## Lint / Format / Pre-commit
 

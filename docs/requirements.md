@@ -41,6 +41,10 @@
   - 受け入れ条件: `VITE_API_BASE_URL` が未設定/空文字のとき、`localhost` へフォールバックせず設定不足がUI上で明示される
   - 対応タスク: BL-016
   - 証跡: 未記入
+- [x] RQ-OPS-010: Frontend/Backend を単一コマンドで同時起動できる
+  - 受け入れ条件: 開発者がルートディレクトリで1コマンド実行するだけで Frontend と Backend のローカルサーバーを同時起動できる
+  - 対応タスク: BL-018
+  - 証跡: `Makefile`, `package.json`, `README.md`
 
 ## B. MVP機能要件
 - [ ] RQ-POM-001: ポモドーロ設定（取得/更新）ができる

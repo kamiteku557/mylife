@@ -6,6 +6,8 @@
     "node": ">=20.19.0"
   },
   "scripts": {
+    "dev": "make dev",
+    "dev:backend": "make backend-dev",
     "dev:frontend": "pnpm --filter mylife-frontend dev",
     "build:frontend": "pnpm --filter mylife-frontend build",
     "preview:frontend": "pnpm --filter mylife-frontend preview",

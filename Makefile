@@ -1,4 +1,7 @@
-.PHONY: backend-sync backend-dev backend-lint backend-format frontend-sync frontend-dev frontend-lint frontend-format precommit-install precommit-run
+.PHONY: dev backend-sync backend-dev backend-lint backend-format frontend-sync frontend-dev frontend-lint frontend-format precommit-install precommit-run
+
+dev:
+	$(MAKE) -j2 backend-dev frontend-dev
 
 backend-sync:
 	cd apps/backend && uv sync

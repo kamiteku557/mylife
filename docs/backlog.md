@@ -44,6 +44,8 @@
   - 影響範囲: frontend/docs
 
 ## Done
+- [x] BL-018 (RQ-OPS-010): Frontend/Backend の同時起動コマンドを追加する
+  - 証跡: `Makefile`, `package.json`, `README.md`, `docs/requirements.md`
 - [x] BL-017 (RQ-MEM-007, RQ-SET-001): 設定画面を追加しメモログ表示設定を実装する
   - 証跡: `apps/frontend/src/App.tsx`, `apps/frontend/src/styles.css`, `docs/requirements.md`
 - [x] BL-016 (RQ-OPS-009): Frontend の API ベースURL未設定時にフェイルファストする
