@@ -12,15 +12,9 @@ interface MemoLog {
   updated_at: string;
 }
 
-interface MemoGroup {
-  dateKey: string;
-  label: string;
-  memos: MemoLog[];
-}
-
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000";
 
-/** カンマ区切りのタグ文字列を、前後空白除去・重複排除したタグ名配列へ変換する。 */
+/** カンマ区切りテキストを重複なしタグ配列へ変換する。 */
 function parseTagText(tagText: string): string[] {
   const unique = new Set<string>();
   return tagText
@@ -35,7 +29,7 @@ function parseTagText(tagText: string): string[] {
     });
 }
 
-/** メモ本文の先頭行から、バックエンド保存用タイトルを暫定生成する。 */
+/** 本文の先頭有効行を、保存用タイトルとして切り出す。 */
 function inferTitleFromBody(body: string): string {
   const line = body
     .split("\n")
@@ -44,16 +38,93 @@ function inferTitleFromBody(body: string): string {
   if (!line) {
     return "";
   }
-  const withoutMarkdown = line.replace(/^#{1,6}\s*/, "").replace(/^[-*]\s*/, "");
-  return withoutMarkdown.slice(0, 80);
+  return line
+    .replace(/^#{1,6}\s*/, "")
+    .replace(/^[-*]\s*/, "")
+    .slice(0, 80);
 }
 
-/** UI表示用の相対時刻を生成する。 */
+/** XSS回避のためにHTML特殊文字をエスケープする。 */
+function escapeHtml(raw: string): string {
+  return raw
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+/** 一行分のMarkdown装飾（リンク・強調・コード）をHTML化する。 */
+function renderInlineMarkdown(line: string): string {
+  const escaped = escapeHtml(line);
+  return escaped
+    .replace(
+      /\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g,
+      '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>',
+    )
+    .replace(/`([^`]+)`/g, "<code>$1</code>")
+    .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
+    .replace(/\*([^*]+)\*/g, "<em>$1</em>");
+}
+
+/** 最低限のMarkdownをモック相当の表示に変換する。 */
+function renderMarkdown(markdown: string): string {
+  const trimmed = markdown.trim();
+  if (!trimmed) {
+    return "";
+  }
+
+  const blocks = trimmed.split(/\n\s*\n/);
+  return blocks
+    .map((block) => {
+      const lines = block.split("\n");
+      const first = lines[0] ?? "";
+
+      if (/^###\s+/.test(first)) {
+        return `<h3>${renderInlineMarkdown(first.replace(/^###\s+/, ""))}</h3>`;
+      }
+      if (/^##\s+/.test(first)) {
+        return `<h2>${renderInlineMarkdown(first.replace(/^##\s+/, ""))}</h2>`;
+      }
+      if (/^#\s+/.test(first)) {
+        return `<h1>${renderInlineMarkdown(first.replace(/^#\s+/, ""))}</h1>`;
+      }
+      if (lines.every((line) => line.startsWith("- "))) {
+        const items = lines
+          .map((line) => `<li>${renderInlineMarkdown(line.replace(/^-\s+/, ""))}</li>`)
+          .join("");
+        return `<ul>${items}</ul>`;
+      }
+      if (lines.every((line) => line.startsWith("> "))) {
+        const body = lines
+          .map((line) => renderInlineMarkdown(line.replace(/^>\s+/, "")))
+          .join("<br />");
+        return `<blockquote>${body}</blockquote>`;
+      }
+      return `<p>${lines.map((line) => renderInlineMarkdown(line)).join("<br />")}</p>`;
+    })
+    .join("");
+}
+
+/** メモ表示用の絶対時刻を生成する。 */
+function formatAbsoluteDate(iso: string): string {
+  return new Intl.DateTimeFormat("ja-JP", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    weekday: "short",
+  }).format(new Date(iso));
+}
+
+/** メモ表示用の相対時刻を生成する。 */
 function formatRelativeTime(iso: string): string {
   const diffMs = Date.now() - new Date(iso).getTime();
   const minutes = Math.floor(diffMs / 60000);
   const hours = Math.floor(diffMs / 3600000);
   const days = Math.floor(diffMs / 86400000);
+
   if (minutes < 1) {
     return "just now";
   }
@@ -69,67 +140,7 @@ function formatRelativeTime(iso: string): string {
   return "";
 }
 
-/** メモ行のヘッダ表示用日付を生成する。 */
-function formatAbsoluteDate(iso: string): string {
-  return new Intl.DateTimeFormat("ja-JP", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-    weekday: "short",
-  }).format(new Date(iso));
-}
-
-/** タイムライン見出しの「Today/Yesterday/日付」ラベルを生成する。 */
-function formatDateLabel(dateKey: string): string {
-  const target = new Date(`${dateKey}T00:00:00`);
-  const now = new Date();
-  const todayKey = now.toISOString().slice(0, 10);
-  if (dateKey === todayKey) {
-    return "Today";
-  }
-
-  const yesterday = new Date(now);
-  yesterday.setDate(yesterday.getDate() - 1);
-  const yesterdayKey = yesterday.toISOString().slice(0, 10);
-  if (dateKey === yesterdayKey) {
-    return "Yesterday";
-  }
-
-  return new Intl.DateTimeFormat("ja-JP", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-    weekday: "short",
-  }).format(target);
-}
-
-/** HTML特殊文字をエスケープする。 */
-function escapeHtml(raw: string): string {
-  return raw
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
-}
-
-/** 最低限のMarkdownを安全にHTMLへ変換する。 */
-function renderMarkdown(markdown: string): string {
-  const escaped = escapeHtml(markdown);
-  const htmlWithBreak = escaped.replace(/\n/g, "<br />");
-  return htmlWithBreak
-    .replace(/`([^`]+)`/g, '<code class="inline-code">$1</code>')
-    .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
-    .replace(/\*([^*]+)\*/g, "<em>$1</em>")
-    .replace(
-      /\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g,
-      '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>',
-    );
-}
-
-/** APIレスポンスをJSONとして受け取り、失敗時をErrorへ正規化する。 */
+/** API JSON取得時に非2xxをErrorへ正規化する。 */
 async function fetchJson<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`${API_BASE_URL}${path}`, {
     headers: {
@@ -147,26 +158,7 @@ async function fetchJson<T>(path: string, init?: RequestInit): Promise<T> {
   return (await response.json()) as T;
 }
 
-/** メモ一覧を日付単位でグルーピングし、タイムライン描画用データへ変換する。 */
-function groupMemoLogs(memoLogs: MemoLog[]): MemoGroup[] {
-  const groups = new Map<string, MemoLog[]>();
-  for (const memo of memoLogs) {
-    const key = memo.log_date || memo.created_at.slice(0, 10);
-    const items = groups.get(key);
-    if (items) {
-      items.push(memo);
-      continue;
-    }
-    groups.set(key, [memo]);
-  }
-  return Array.from(groups.entries()).map(([dateKey, memos]) => ({
-    dateKey,
-    label: formatDateLabel(dateKey),
-    memos,
-  }));
-}
-
-/** BL-014 対応: メモログのデザイン準拠UI。 */
+/** BL-014: v0モック準拠のメモログUI。 */
 export function App() {
   const [memoLogs, setMemoLogs] = useState<MemoLog[]>([]);
   const [composerBody, setComposerBody] = useState("");
@@ -179,8 +171,6 @@ export function App() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
-
-  const memoGroups = useMemo(() => groupMemoLogs(memoLogs), [memoLogs]);
 
   const refreshMemos = useCallback(async () => {
     setLoading(true);
@@ -200,23 +190,21 @@ export function App() {
     void refreshMemos();
   }, [refreshMemos]);
 
-  /** コンポーザーのタグ入力欄から重複なしでタグを追加する。 */
   const addComposerTag = useCallback(() => {
-    const nextTags = parseTagText(composerTagInput).filter((tag) => !composerTags.includes(tag));
-    if (nextTags.length === 0) {
+    const tags = parseTagText(composerTagInput).filter((tag) => !composerTags.includes(tag));
+    if (tags.length === 0) {
       return;
     }
-    setComposerTags((prev) => [...prev, ...nextTags]);
+    setComposerTags((prev) => [...prev, ...tags]);
     setComposerTagInput("");
   }, [composerTagInput, composerTags]);
 
-  /** 編集フォームのタグ入力欄から重複なしでタグを追加する。 */
   const addEditTag = useCallback(() => {
-    const nextTags = parseTagText(editTagInput).filter((tag) => !editTags.includes(tag));
-    if (nextTags.length === 0) {
+    const tags = parseTagText(editTagInput).filter((tag) => !editTags.includes(tag));
+    if (tags.length === 0) {
       return;
     }
-    setEditTags((prev) => [...prev, ...nextTags]);
+    setEditTags((prev) => [...prev, ...tags]);
     setEditTagInput("");
   }, [editTagInput, editTags]);
 
@@ -232,13 +220,6 @@ export function App() {
     setEditBody("");
     setEditTags([]);
     setEditTagInput("");
-  }, []);
-
-  const handleComposerKeyDown = useCallback((event: KeyboardEvent<HTMLTextAreaElement>) => {
-    if (event.key === "Enter" && (event.ctrlKey || event.metaKey)) {
-      event.preventDefault();
-      event.currentTarget.form?.requestSubmit();
-    }
   }, []);
 
   const handleComposerTagKeyDown = useCallback(
@@ -267,6 +248,13 @@ export function App() {
     [addEditTag, editTagInput, editTags.length],
   );
 
+  const handleComposerKeyDown = useCallback((event: KeyboardEvent<HTMLTextAreaElement>) => {
+    if (event.key === "Enter" && (event.ctrlKey || event.metaKey)) {
+      event.preventDefault();
+      event.currentTarget.form?.requestSubmit();
+    }
+  }, []);
+
   const handleCreate = useCallback(
     async (event: FormEvent<HTMLFormElement>) => {
       event.preventDefault();
@@ -283,7 +271,7 @@ export function App() {
           body_md: composerBody.trim(),
           log_date: new Date().toISOString().slice(0, 10),
           tags: composerTags,
-          // BL-014 では既存仕様を維持し、関連セッションは未指定のまま送信する。
+          // セッション紐づけUIは未提供のため、現時点はnull固定で送信する。
           related_session_id: null,
         };
         const created = await fetchJson<MemoLog>("/api/v1/memo-logs", {
@@ -359,47 +347,61 @@ export function App() {
     [cancelEditing, editingId],
   );
 
+  const renderedMemos = useMemo(
+    () =>
+      memoLogs.map((memo) => ({
+        ...memo,
+        renderedBody: renderMarkdown(memo.body_md),
+        absoluteDate: formatAbsoluteDate(memo.created_at),
+        relativeDate: formatRelativeTime(memo.created_at),
+      })),
+    [memoLogs],
+  );
+
   return (
-    <main className="memo-page">
-      <header className="top-nav">
-        <div className="top-nav-inner">
-          <div className="brand">
-            <span className="brand-mark" aria-hidden="true">
-              ◌
-            </span>
-            <span className="brand-name">mylife</span>
+    <div className="page-shell">
+      <header className="app-header">
+        <div className="app-header-inner">
+          <div className="brand-wrap">
+            <svg className="brand-icon" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 6v13M3 5.5A2.5 2.5 0 0 1 5.5 3H12v16H5.5A2.5 2.5 0 0 0 3 21.5z" />
+              <path d="M21 5.5A2.5 2.5 0 0 0 18.5 3H12v16h6.5a2.5 2.5 0 0 1 2.5 2.5z" />
+            </svg>
+            <span className="brand-text">mylife</span>
           </div>
-          <nav className="nav-tabs" aria-label="Main navigation">
-            <span className="nav-tab active">Memo</span>
-            <span className="nav-tab muted">Session</span>
+
+          <nav className="menu-tabs" aria-label="Main navigation">
+            <span className="menu-tab active">Memo</span>
+            <span className="menu-tab">Session</span>
           </nav>
-          <button type="button" className="ghost-btn" onClick={() => void refreshMemos()}>
+
+          <button type="button" className="refresh-btn" onClick={() => void refreshMemos()}>
             再読込
           </button>
         </div>
       </header>
 
-      <section className="content-wrap">
-        <section className="composer-card" aria-label="Write a new memo">
+      <main className="content">
+        <section className="composer" aria-label="Write a new memo">
           <form onSubmit={handleCreate}>
             <textarea
               value={composerBody}
               onChange={(event) => setComposerBody(event.target.value)}
               onKeyDown={handleComposerKeyDown}
+              className="composer-textarea"
               placeholder="Write your memo... (Markdown supported)"
-              className="composer-input"
-              rows={6}
+              rows={7}
               required
             />
 
-            <div className="tag-editor">
+            <div className="composer-tags">
               {composerTags.map((tag) => (
-                <span key={tag} className="tag-chip">
-                  <span className="hash">#</span>
+                <span key={tag} className="tag-pill">
+                  <span className="tag-mark">#</span>
                   {tag}
                   <button
                     type="button"
-                    className="icon-btn"
+                    className="tag-remove"
                     onClick={() => setComposerTags((prev) => prev.filter((item) => item !== tag))}
                     aria-label={`${tag} を削除`}
                   >
@@ -408,7 +410,7 @@ export function App() {
                 </span>
               ))}
               <span className="tag-input-wrap">
-                <span className="plus" aria-hidden="true">
+                <span className="tag-plus" aria-hidden="true">
                   +
                 </span>
                 <input
@@ -423,15 +425,19 @@ export function App() {
             </div>
 
             <div className="composer-footer">
-              <p className="hint">
-                <kbd>Ctrl</kbd> + <kbd>Enter</kbd> で保存
+              <p className="composer-hint">
+                <kbd>Ctrl</kbd> + <kbd>Enter</kbd> to save
               </p>
               <button
                 type="submit"
-                className="primary-btn"
+                className="save-btn"
                 disabled={submitting || !composerBody.trim()}
               >
-                {submitting ? "Saving..." : "Save"}
+                <svg viewBox="0 0 24 24" className="save-icon" aria-hidden="true">
+                  <path d="m3 11 18-8-8 18-2.5-7.5z" />
+                  <path d="M10.5 13.5 21 3" />
+                </svg>
+                Save
               </button>
             </div>
           </form>
@@ -439,145 +445,128 @@ export function App() {
 
         {error ? <p className="error-banner">{error}</p> : null}
 
-        <section aria-label="Memo log">
-          {loading ? <p className="loading">読み込み中...</p> : null}
+        {loading ? <p className="status-text">Loading...</p> : null}
 
-          {!loading && memoLogs.length === 0 ? (
-            <div className="empty-state">
-              <p className="empty-title">No memos yet</p>
-              <p className="empty-note">Start writing above to create your first memo.</p>
-            </div>
-          ) : null}
+        {!loading && renderedMemos.length === 0 ? (
+          <div className="empty-state">
+            <p className="empty-title">No memos yet</p>
+            <p className="empty-note">Start writing above to create your first memo.</p>
+          </div>
+        ) : null}
 
-          {!loading &&
-            memoGroups.map((group) => (
-              <div key={group.dateKey} className="day-group">
-                <div className="day-header">
-                  <span className="day-label">{group.label}</span>
-                  <span className="day-summary">{group.memos.length} memos</span>
-                </div>
+        <section aria-label="Memo log" className="timeline">
+          {renderedMemos.map((memo) => {
+            const isEditing = editingId === memo.id;
+            return (
+              <article key={memo.id} className="memo-row">
+                {isEditing ? (
+                  <>
+                    <textarea
+                      value={editBody}
+                      onChange={(event) => setEditBody(event.target.value)}
+                      rows={6}
+                      className="edit-textarea"
+                    />
 
-                {group.memos.map((memo) => {
-                  const isEditing = memo.id === editingId;
-                  return (
-                    <article key={memo.id} className="memo-card">
-                      {isEditing ? (
-                        <>
-                          <textarea
-                            className="edit-input"
-                            value={editBody}
-                            onChange={(event) => setEditBody(event.target.value)}
-                            rows={5}
-                          />
+                    <div className="composer-tags">
+                      {editTags.map((tag) => (
+                        <span key={tag} className="tag-pill">
+                          <span className="tag-mark">#</span>
+                          {tag}
+                          <button
+                            type="button"
+                            className="tag-remove"
+                            onClick={() =>
+                              setEditTags((prev) => prev.filter((item) => item !== tag))
+                            }
+                            aria-label={`${tag} を削除`}
+                          >
+                            ×
+                          </button>
+                        </span>
+                      ))}
+                      <span className="tag-input-wrap">
+                        <span className="tag-plus" aria-hidden="true">
+                          +
+                        </span>
+                        <input
+                          value={editTagInput}
+                          onChange={(event) => setEditTagInput(event.target.value)}
+                          onKeyDown={handleEditTagKeyDown}
+                          onBlur={addEditTag}
+                          placeholder="Add tag..."
+                          className="tag-input"
+                        />
+                      </span>
+                    </div>
 
-                          <div className="tag-editor">
-                            {editTags.map((tag) => (
-                              <span key={tag} className="tag-chip">
-                                <span className="hash">#</span>
-                                {tag}
-                                <button
-                                  type="button"
-                                  className="icon-btn"
-                                  onClick={() =>
-                                    setEditTags((prev) => prev.filter((item) => item !== tag))
-                                  }
-                                  aria-label={`${tag} を削除`}
-                                >
-                                  ×
-                                </button>
-                              </span>
-                            ))}
-                            <span className="tag-input-wrap">
-                              <span className="plus" aria-hidden="true">
-                                +
-                              </span>
-                              <input
-                                value={editTagInput}
-                                onChange={(event) => setEditTagInput(event.target.value)}
-                                onKeyDown={handleEditTagKeyDown}
-                                onBlur={addEditTag}
-                                placeholder="Add tag..."
-                                className="tag-input"
-                              />
-                            </span>
-                          </div>
+                    <div className="edit-actions">
+                      <button
+                        type="button"
+                        className="save-btn"
+                        onClick={() => void handleSaveEdit()}
+                      >
+                        Save
+                      </button>
+                      <button type="button" className="row-icon-btn" onClick={cancelEditing}>
+                        Cancel
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="row-toolbar">
+                      <button
+                        type="button"
+                        className="row-icon-btn"
+                        onClick={() => startEditing(memo)}
+                      >
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                          <path d="M3 17.25V21h3.75L19.8 7.95 16.05 4.2z" />
+                          <path d="m14.5 5.75 3.75 3.75" />
+                        </svg>
+                      </button>
+                      <button
+                        type="button"
+                        className="row-icon-btn"
+                        onClick={() => void handleDelete(memo.id)}
+                      >
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                          <path d="M4 7h16" />
+                          <path d="M10 11v6" />
+                          <path d="M14 11v6" />
+                          <path d="M6 7l1 13h10l1-13" />
+                          <path d="M9 7V4h6v3" />
+                        </svg>
+                      </button>
+                    </div>
 
-                          <div className="row-actions">
-                            <button
-                              type="button"
-                              className="primary-btn"
-                              disabled={submitting || !editBody.trim()}
-                              onClick={() => void handleSaveEdit()}
-                            >
-                              Save
-                            </button>
-                            <button
-                              type="button"
-                              className="ghost-btn"
-                              disabled={submitting}
-                              onClick={cancelEditing}
-                            >
-                              Cancel
-                            </button>
-                          </div>
-                        </>
-                      ) : (
-                        <>
-                          <div
-                            className="memo-body"
-                            dangerouslySetInnerHTML={{ __html: renderMarkdown(memo.body_md) }}
-                          />
+                    <div
+                      className="memo-content"
+                      dangerouslySetInnerHTML={{ __html: memo.renderedBody }}
+                    />
 
-                          <div className="memo-footer">
-                            <div className="memo-tags">
-                              {memo.tags.map((tag) => (
-                                <span key={tag} className="tag-chip outline">
-                                  <span className="hash">#</span>
-                                  {tag}
-                                </span>
-                              ))}
-                            </div>
-
-                            <div className="memo-meta">
-                              <time
-                                dateTime={memo.created_at}
-                                title={formatAbsoluteDate(memo.created_at)}
-                              >
-                                {formatAbsoluteDate(memo.created_at)}
-                              </time>
-                              {formatRelativeTime(memo.created_at) ? (
-                                <span>{` / ${formatRelativeTime(memo.created_at)}`}</span>
-                              ) : null}
-                            </div>
-                          </div>
-
-                          <div className="row-actions">
-                            <button
-                              type="button"
-                              className="ghost-btn"
-                              onClick={() => startEditing(memo)}
-                              disabled={submitting}
-                            >
-                              Edit
-                            </button>
-                            <button
-                              type="button"
-                              className="ghost-btn danger"
-                              onClick={() => void handleDelete(memo.id)}
-                              disabled={submitting}
-                            >
-                              Delete
-                            </button>
-                          </div>
-                        </>
-                      )}
-                    </article>
-                  );
-                })}
-              </div>
-            ))}
+                    <div className="memo-footer">
+                      <div className="memo-tags">
+                        {memo.tags.map((tag) => (
+                          <span key={tag} className="tag-pill outline">
+                            <span className="tag-mark">#</span>
+                            {tag}
+                          </span>
+                        ))}
+                      </div>
+                      <div className="memo-date">
+                        <time dateTime={memo.created_at}>{memo.absoluteDate}</time>
+                        {memo.relativeDate ? <span>{` / ${memo.relativeDate}`}</span> : null}
+                      </div>
+                    </div>
+                  </>
+                )}
+              </article>
+            );
+          })}
         </section>
-      </section>
-    </main>
+      </main>
+    </div>
   );
 }
