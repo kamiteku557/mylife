@@ -1,4 +1,4 @@
-"""Supabase health-check service and helpers."""
+"""Supabase 接続ヘルスチェック用サービスと補助関数。"""
 
 from collections.abc import Mapping
 from typing import Any
@@ -9,7 +9,7 @@ from app.config import get_settings
 
 
 def check_supabase_db_connection() -> Mapping[str, Any]:
-    """Query a minimal row count from `users` table to verify DB connectivity."""
+    """`users` テーブルの最小クエリを実行し、DB 疎通を確認する。"""
 
     settings = get_settings()
     api_key = settings.supabase_service_role_key or settings.supabase_anon_key
@@ -30,15 +30,15 @@ def check_supabase_db_connection() -> Mapping[str, Any]:
 
 
 class SupabaseHealthService:
-    """Service object for Supabase DB health checks."""
+    """Supabase DB ヘルスチェック用のサービスオブジェクト。"""
 
     def check(self) -> Mapping[str, Any]:
-        """Execute DB connectivity check and return a normalized payload."""
+        """DB 疎通確認を実行し、正規化した payload を返す。"""
 
         return check_supabase_db_connection()
 
 
 def get_supabase_health_service() -> SupabaseHealthService:
-    """Return health service instance for FastAPI dependency injection."""
+    """FastAPI 依存性注入向けのヘルスサービスインスタンスを返す。"""
 
     return SupabaseHealthService()
