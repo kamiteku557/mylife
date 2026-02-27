@@ -13,5 +13,6 @@
 
 ## 監視ポイント
 - Render health endpoint: `/api/v1/health`
+- Render ping endpoint: `/api/v1/ping`
 - Frontend表示でhealth JSONを取得できるか
 - Render freeのコールドスタート遅延を許容

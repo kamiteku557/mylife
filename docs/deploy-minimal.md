@@ -44,11 +44,26 @@
 - 再デプロイ後、Frontendからhealth取得できることを確認
 
 ## 5. 最小動作確認チェック
-- [ ] Frontend本番URLが表示される
-- [ ] Backend `/api/v1/health` が200
-- [ ] Frontend上でhealth JSONが表示される
+- [x] Frontend本番URLが表示される (`https://mylife-9js.pages.dev`)
+- [x] Backend `/api/v1/health` が200 (`https://mylife-api.onrender.com/api/v1/health`)
+- [x] Frontend上でhealth JSONが表示される
 
-## 6. トラブルシュート
+## 6. 実運用値（2026-02-26時点）
+- Frontend URL: `https://mylife-9js.pages.dev`
+- Backend URL: `https://mylife-api.onrender.com`
+- Frontend env: `VITE_API_BASE_URL=https://mylife-api.onrender.com`
+- Backend env: `CORS_ALLOW_ORIGINS=https://mylife-9js.pages.dev`
+
+## 7. デプロイ確認コマンド
+```bash
+./scripts/verify_deploy.sh
+```
+任意のURLを使う場合:
+```bash
+./scripts/verify_deploy.sh https://<backend-url> https://<frontend-url>
+```
+
+## 8. トラブルシュート
 1. FrontendでCORSエラー
 - Render `CORS_ALLOW_ORIGINS` に Frontend URL が一致しているか確認
 

@@ -80,4 +80,5 @@ pnpm --filter mylife-frontend build
 - `docs/setup.md`
 - `docs/deploy-minimal.md`
 - `docs/deployment-runbook.md`
+- `docs/supabase-setup.md`
 - `README.md`

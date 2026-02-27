@@ -47,6 +47,7 @@ Open [http://localhost:5173](http://localhost:5173)
 - Setup guide (consolidated): `docs/environment-setup.md`
 - Minimal deploy guide: `docs/deploy-minimal.md`
 - Deployment runbook: `docs/deployment-runbook.md`
+- Supabase setup: `docs/supabase-setup.md`
 
 ## Deploy targets (free-tier plan)
 - Frontend: Cloudflare Pages Free (or Vercel Hobby)
