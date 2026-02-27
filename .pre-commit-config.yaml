@@ -1,0 +1,28 @@
+repos:
+  - repo: local
+    hooks:
+      - id: backend-ruff-check-fix
+        name: backend ruff check --fix
+        entry: uv run --project apps/backend ruff check --fix
+        language: system
+        files: ^apps/backend/.*\.py$
+
+      - id: backend-ruff-format
+        name: backend ruff format
+        entry: uv run --project apps/backend ruff format
+        language: system
+        files: ^apps/backend/.*\.py$
+
+      - id: frontend-eslint-fix
+        name: frontend eslint --fix
+        entry: pnpm --filter mylife-frontend exec eslint --fix
+        language: system
+        files: ^apps/frontend/.*\.(js|jsx|ts|tsx)$
+        pass_filenames: false
+
+      - id: frontend-prettier-write
+        name: frontend prettier --write
+        entry: pnpm --filter mylife-frontend exec prettier --write .
+        language: system
+        files: ^apps/frontend/.*\.(js|jsx|ts|tsx|json|css|md|html|yml|yaml)$
+        pass_filenames: false

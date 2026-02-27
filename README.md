@@ -10,6 +10,8 @@ Single-user full-stack app for Pomodoro, memo logs, and diary.
 ## Tooling policy (modern baseline)
 - Frontend package manager: pnpm (via Corepack)
 - Backend Python workflow: uv (`uv sync`, `uv run`)
+- Lint/Format: Backend=`ruff`, Frontend=`eslint + prettier`
+- Commit hooks: `pre-commit` (run from backend uv environment)
 
 ## Quick start
 
@@ -40,6 +42,30 @@ pnpm --filter mylife-frontend dev
 ```
 
 Open [http://localhost:5173](http://localhost:5173)
+
+## Lint / Format / Pre-commit
+
+Install frontend and backend dev dependencies:
+```bash
+pnpm install
+cd apps/backend && uv sync
+```
+
+Run checks manually:
+```bash
+pnpm lint
+pnpm format
+```
+
+Install git pre-commit hook:
+```bash
+pnpm precommit:install
+```
+
+Run hooks for all files:
+```bash
+pnpm precommit:run
+```
 
 ## Environment variables
 - Backend env template: `apps/backend/.env.example`
