@@ -1,7 +1,6 @@
-"""Memo log service layer for Supabase-backed CRUD operations.
+"""Supabase を利用したメモログ CRUD のサービス層。
 
-This module currently uses a fixed demo user until authenticated user context
-is available via RQ-OPS-004.
+RQ-OPS-004 で認証ユーザー文脈が導入されるまで、固定デモユーザーを利用する。
 """
 
 from collections import defaultdict
@@ -16,12 +15,12 @@ from supabase import Client, create_client
 
 from app.config import get_settings
 
-# Temporary until RQ-OPS-004 auth is implemented: all memo APIs operate on a fixed demo user.
+# RQ-OPS-004 の認証実装までの暫定対応として、メモ API は固定デモユーザーで動作する。
 DEMO_USER_ID = "00000000-0000-0000-0000-000000000001"
 
 
 class MemoLogCreate(BaseModel):
-    """Payload for creating a memo log."""
+    """メモログ作成時の入力 payload。"""
 
     title: str = ""
     body_md: str = Field(min_length=1)
@@ -31,7 +30,7 @@ class MemoLogCreate(BaseModel):
 
 
 class MemoLogUpdate(BaseModel):
-    """Payload for updating a memo log."""
+    """メモログ更新時の入力 payload。"""
 
     title: str = ""
     body_md: str = Field(min_length=1)
@@ -41,7 +40,7 @@ class MemoLogUpdate(BaseModel):
 
 
 class MemoLogOut(BaseModel):
-    """Serialized memo log response shape."""
+    """メモログ API 応答のシリアライズ形式。"""
 
     id: UUID
     user_id: UUID
@@ -55,48 +54,48 @@ class MemoLogOut(BaseModel):
 
 
 class MemoLogNotFoundError(ValueError):
-    """Raised when a memo log record does not exist for the current user scope."""
+    """現在のユーザースコープでメモログが見つからない場合に送出する。"""
 
     pass
 
 
 class MemoLogService:
-    """Service object exposed to FastAPI dependency injection for memo-log use cases."""
+    """メモログユースケース向けに FastAPI DI へ公開するサービスオブジェクト。"""
 
     def list(self) -> list[MemoLogOut]:
-        """List memo logs for the current user scope."""
+        """現在のユーザースコープでメモログ一覧を返す。"""
 
         return list_memo_logs()
 
     def get(self, memo_id: str) -> MemoLogOut:
-        """Fetch one memo log by ID."""
+        """ID を指定してメモログを 1 件取得する。"""
 
         return get_memo_log(memo_id)
 
     def create(self, payload: MemoLogCreate) -> MemoLogOut:
-        """Create a memo log."""
+        """メモログを作成する。"""
 
         return create_memo_log(payload)
 
     def update(self, memo_id: str, payload: MemoLogUpdate) -> MemoLogOut:
-        """Update a memo log."""
+        """メモログを更新する。"""
 
         return update_memo_log(memo_id, payload)
 
     def delete(self, memo_id: str) -> None:
-        """Delete a memo log."""
+        """メモログを削除する。"""
 
         delete_memo_log(memo_id)
 
 
 def get_memo_log_service() -> MemoLogService:
-    """Return memo-log service instance for dependency injection."""
+    """依存性注入用のメモログサービスインスタンスを返す。"""
 
     return MemoLogService()
 
 
 def _normalize_tags(tags: list[str]) -> list[str]:
-    """Return unique, trimmed tags while preserving input order."""
+    """入力順を保ったまま、空文字除去・前後空白除去・重複除去したタグ一覧を返す。"""
 
     seen: set[str] = set()
     normalized: list[str] = []
@@ -110,7 +109,7 @@ def _normalize_tags(tags: list[str]) -> list[str]:
 
 
 def _parse_datetime(value: str | None) -> datetime:
-    """Parse Supabase timestamp text and fallback to current UTC time when absent."""
+    """Supabase のタイムスタンプ文字列を解析し、未指定時は現在 UTC を返す。"""
 
     if not value:
         return datetime.now(tz=UTC)
@@ -119,7 +118,7 @@ def _parse_datetime(value: str | None) -> datetime:
 
 @lru_cache(maxsize=1)
 def _get_client() -> Client:
-    """Create and reuse a Supabase client using service-role key when available."""
+    """可能なら service-role key を使い、再利用可能な Supabase クライアントを返す。"""
 
     settings = get_settings()
     api_key = settings.supabase_service_role_key or settings.supabase_anon_key
@@ -131,7 +130,7 @@ def _get_client() -> Client:
 
 
 def _ensure_demo_user(client: Client, user_id: str) -> None:
-    # Keep local/dev API calls functional without a signup step by ensuring the fixed user exists.
+    # サインアップ手順なしでもローカル開発 API が動くよう、固定ユーザーを事前に用意する。
     client.table("users").upsert(
         {"id": user_id, "display_name": "Demo User"},
         on_conflict="id",
@@ -140,13 +139,13 @@ def _ensure_demo_user(client: Client, user_id: str) -> None:
 
 @lru_cache(maxsize=1)
 def _ensure_demo_user_once() -> None:
-    """Ensure the fixed demo user once per process to avoid per-request upsert latency."""
+    """固定デモユーザー作成をプロセスごとに 1 回へ抑え、リクエストごとの遅延を避ける。"""
 
     _ensure_demo_user(_get_client(), DEMO_USER_ID)
 
 
 def _memo_to_out(row: Mapping[str, Any], tags: list[str]) -> MemoLogOut:
-    """Convert raw table row data into the API response model."""
+    """テーブル生データを API 応答モデルへ変換する。"""
 
     return MemoLogOut(
         id=row["id"],
@@ -162,7 +161,7 @@ def _memo_to_out(row: Mapping[str, Any], tags: list[str]) -> MemoLogOut:
 
 
 def _load_tags_for_memo_ids(client: Client, memo_ids: list[str]) -> dict[str, list[str]]:
-    """Load memo->tag names mapping for a batch of memo IDs."""
+    """メモ ID 群に紐づくタグ名の対応表をまとめて取得する。"""
 
     if not memo_ids:
         return {}
@@ -188,7 +187,7 @@ def _load_tags_for_memo_ids(client: Client, memo_ids: list[str]) -> dict[str, li
 
 
 def _sync_memo_tags(client: Client, user_id: str, memo_id: str, tags: list[str]) -> list[str]:
-    """Replace all tags for a memo and return the normalized persisted tag names."""
+    """メモのタグを全置換し、正規化後に永続化されたタグ名一覧を返す。"""
 
     normalized_tags = _normalize_tags(tags)
     client.table("memo_log_tags").delete().eq("memo_log_id", memo_id).execute()
@@ -217,7 +216,7 @@ def _sync_memo_tags(client: Client, user_id: str, memo_id: str, tags: list[str])
 
 
 def list_memo_logs() -> list[MemoLogOut]:
-    """List all memo logs for the current user scope in descending date order."""
+    """現在のユーザースコープでメモログを日付降順で返す。"""
 
     client = _get_client()
     _ensure_demo_user_once()
@@ -239,7 +238,7 @@ def list_memo_logs() -> list[MemoLogOut]:
 
 
 def get_memo_log(memo_id: str) -> MemoLogOut:
-    """Get one memo log by ID or raise ``MemoLogNotFoundError``."""
+    """ID を指定してメモログを 1 件取得し、なければ ``MemoLogNotFoundError`` を送出する。"""
 
     client = _get_client()
     _ensure_demo_user_once()
@@ -261,7 +260,7 @@ def get_memo_log(memo_id: str) -> MemoLogOut:
 
 
 def create_memo_log(payload: MemoLogCreate) -> MemoLogOut:
-    """Create a memo log row and attach tag relations."""
+    """メモログを作成し、タグ関連を紐づける。"""
 
     client = _get_client()
     _ensure_demo_user_once()
@@ -288,7 +287,7 @@ def create_memo_log(payload: MemoLogCreate) -> MemoLogOut:
 
 
 def update_memo_log(memo_id: str, payload: MemoLogUpdate) -> MemoLogOut:
-    """Update a memo log and fully replace its tag relations."""
+    """メモログを更新し、タグ関連を完全に置き換える。"""
 
     client = _get_client()
     _ensure_demo_user_once()
@@ -318,7 +317,7 @@ def update_memo_log(memo_id: str, payload: MemoLogUpdate) -> MemoLogOut:
 
 
 def delete_memo_log(memo_id: str) -> None:
-    """Delete a memo log by ID or raise ``MemoLogNotFoundError`` when missing."""
+    """ID を指定してメモログを削除し、未存在なら ``MemoLogNotFoundError`` を送出する。"""
 
     client = _get_client()
     _ensure_demo_user_once()

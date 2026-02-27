@@ -1,4 +1,4 @@
-"""FastAPI entrypoint and HTTP handlers for mylife backend."""
+"""mylife バックエンドの FastAPI エントリポイントと HTTP ハンドラー。"""
 
 from fastapi import Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -32,14 +32,14 @@ app.add_middleware(
 
 @app.get("/api/v1/health")
 def health() -> dict[str, str]:
-    """Return application health metadata for simple uptime checks."""
+    """簡易稼働確認向けのアプリケーションヘルス情報を返す。"""
 
     return {"status": "ok", "service": settings.app_name, "env": settings.app_env}
 
 
 @app.get("/api/v1/ping")
 def ping() -> dict[str, str]:
-    """Return lightweight ping response used in local connectivity checks."""
+    """ローカル疎通確認で使う軽量な ping 応答を返す。"""
 
     return {"message": "pong"}
 
@@ -48,7 +48,7 @@ def ping() -> dict[str, str]:
 def supabase_db_health(
     service: SupabaseHealthService = supabase_health_service_dep,
 ) -> dict[str, str | int | None]:
-    """Check Supabase table connectivity and expose a minimal diagnostic payload."""
+    """Supabase テーブル疎通を確認し、最小限の診断情報を返す。"""
 
     try:
         result = service.check()
@@ -70,7 +70,7 @@ def supabase_db_health(
 
 @app.get("/api/v1/memo-logs", response_model=list[MemoLogOut])
 def memo_logs_list(service: MemoLogService = memo_log_service_dep) -> list[MemoLogOut]:
-    """List memo logs for the current user scope."""
+    """現在のユーザースコープでメモログ一覧を返す。"""
 
     try:
         return service.list()
@@ -82,7 +82,7 @@ def memo_logs_list(service: MemoLogService = memo_log_service_dep) -> list[MemoL
 
 @app.get("/api/v1/memo-logs/{memo_id}", response_model=MemoLogOut)
 def memo_logs_get(memo_id: str, service: MemoLogService = memo_log_service_dep) -> MemoLogOut:
-    """Fetch one memo log by ID."""
+    """ID を指定してメモログを 1 件取得する。"""
 
     try:
         return service.get(memo_id)
@@ -98,7 +98,7 @@ def memo_logs_get(memo_id: str, service: MemoLogService = memo_log_service_dep) 
 def memo_logs_create(
     payload: MemoLogCreate, service: MemoLogService = memo_log_service_dep
 ) -> MemoLogOut:
-    """Create one memo log row from request payload."""
+    """リクエスト payload からメモログを 1 件作成する。"""
 
     try:
         return service.create(payload)
@@ -114,7 +114,7 @@ def memo_logs_update(
     payload: MemoLogUpdate,
     service: MemoLogService = memo_log_service_dep,
 ) -> MemoLogOut:
-    """Update one memo log row and replace tag assignments."""
+    """メモログを 1 件更新し、タグ紐づけを置き換える。"""
 
     try:
         return service.update(memo_id, payload)
@@ -128,7 +128,7 @@ def memo_logs_update(
 
 @app.delete("/api/v1/memo-logs/{memo_id}", status_code=204)
 def memo_logs_delete(memo_id: str, service: MemoLogService = memo_log_service_dep) -> None:
-    """Delete one memo log row by ID."""
+    """ID を指定してメモログを 1 件削除する。"""
 
     try:
         service.delete(memo_id)

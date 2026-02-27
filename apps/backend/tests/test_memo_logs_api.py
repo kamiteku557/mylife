@@ -1,4 +1,4 @@
-"""API tests for memo-log CRUD handlers using FastAPI dependency overrides."""
+"""FastAPI 依存性オーバーライドを使ったメモログ CRUD API テスト。"""
 
 from datetime import UTC, date, datetime
 
@@ -11,35 +11,35 @@ client = TestClient(app)
 
 
 class FakeMemoLogService:
-    """Small test double used to control handler behavior per test case."""
+    """テストケースごとにハンドラー挙動を制御する小さなテストダブル。"""
 
     def list(self) -> list[dict]:
-        """Return a list response."""
+        """一覧レスポンスを返す。"""
 
         return [_sample_memo()]
 
     def get(self, _memo_id: str) -> dict:
-        """Return a single memo response."""
+        """単一メモレスポンスを返す。"""
 
         return _sample_memo()
 
     def create(self, _payload: object) -> dict:
-        """Return a created memo response."""
+        """作成後メモレスポンスを返す。"""
 
         return _sample_memo()
 
     def update(self, _memo_id: str, _payload: object) -> dict:
-        """Return an updated memo response."""
+        """更新後メモレスポンスを返す。"""
 
         return _sample_memo()
 
     def delete(self, _memo_id: str) -> None:
-        """Simulate successful deletion."""
+        """削除成功を模擬する。"""
 
 
 @pytest.fixture(autouse=True)
 def reset_dependency_overrides():
-    """Isolate each test by clearing FastAPI dependency overrides."""
+    """FastAPI 依存性オーバーライドをクリアし、テスト間の影響を遮断する。"""
 
     app.dependency_overrides.clear()
     yield
@@ -47,7 +47,7 @@ def reset_dependency_overrides():
 
 
 def _sample_memo(memo_id: str = "11111111-1111-1111-1111-111111111111") -> dict:
-    """Return a stable sample payload for endpoint response assertions."""
+    """エンドポイント応答検証で使う安定したサンプル payload を返す。"""
 
     now = datetime(2026, 2, 27, 10, 0, tzinfo=UTC)
     return {
@@ -64,7 +64,7 @@ def _sample_memo(memo_id: str = "11111111-1111-1111-1111-111111111111") -> dict:
 
 
 def test_list_memo_logs():
-    """GET /memo-logs returns a list payload when service succeeds."""
+    """GET /memo-logs はサービス成功時に一覧 payload を返す。"""
 
     app.dependency_overrides[get_memo_log_service] = FakeMemoLogService
 
@@ -77,7 +77,7 @@ def test_list_memo_logs():
 
 
 def test_get_memo_log_not_found():
-    """GET /memo-logs/{id} maps missing records to HTTP 404."""
+    """GET /memo-logs/{id} は未存在レコードを HTTP 404 に変換する。"""
 
     class NotFoundService(FakeMemoLogService):
         def get(self, _memo_id: str) -> dict:
@@ -92,7 +92,7 @@ def test_get_memo_log_not_found():
 
 
 def test_create_memo_log():
-    """POST /memo-logs returns HTTP 201 with created memo payload."""
+    """POST /memo-logs は作成済みメモ payload と HTTP 201 を返す。"""
 
     app.dependency_overrides[get_memo_log_service] = FakeMemoLogService
 
@@ -112,7 +112,7 @@ def test_create_memo_log():
 
 
 def test_update_memo_log():
-    """PUT /memo-logs/{id} returns updated memo payload."""
+    """PUT /memo-logs/{id} は更新後メモ payload を返す。"""
 
     app.dependency_overrides[get_memo_log_service] = FakeMemoLogService
 
@@ -132,7 +132,7 @@ def test_update_memo_log():
 
 
 def test_delete_memo_log():
-    """DELETE /memo-logs/{id} returns HTTP 204 on successful deletion."""
+    """DELETE /memo-logs/{id} は削除成功時に HTTP 204 を返す。"""
 
     app.dependency_overrides[get_memo_log_service] = FakeMemoLogService
 

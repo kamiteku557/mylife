@@ -1,4 +1,4 @@
-"""API tests for Supabase DB health handler using dependency overrides."""
+"""依存性オーバーライドを使った Supabase DB ヘルス API テスト。"""
 
 import pytest
 from app.main import app
@@ -9,17 +9,17 @@ client = TestClient(app)
 
 
 class FakeSupabaseHealthService:
-    """Test double for controlling Supabase health check results."""
+    """Supabase ヘルスチェック結果を制御するテストダブル。"""
 
     def check(self) -> dict:
-        """Return successful health payload."""
+        """ヘルスチェック成功 payload を返す。"""
 
         return {"checked_table": "users", "row_count": 0, "total_count": 0}
 
 
 @pytest.fixture(autouse=True)
 def reset_dependency_overrides():
-    """Ensure dependency overrides do not leak across tests."""
+    """依存性オーバーライドがテスト間で漏れないようにする。"""
 
     app.dependency_overrides.clear()
     yield
@@ -27,7 +27,7 @@ def reset_dependency_overrides():
 
 
 def test_supabase_connection_success():
-    """GET health endpoint returns normalized success response."""
+    """ヘルスエンドポイントは正規化済みの成功レスポンスを返す。"""
 
     app.dependency_overrides[get_supabase_health_service] = FakeSupabaseHealthService
 
@@ -44,7 +44,7 @@ def test_supabase_connection_success():
 
 
 def test_supabase_connection_missing_config():
-    """ValueError from service is translated to HTTP 503."""
+    """サービスの ValueError は HTTP 503 に変換される。"""
 
     class MissingConfigService(FakeSupabaseHealthService):
         def check(self) -> dict:
@@ -59,7 +59,7 @@ def test_supabase_connection_missing_config():
 
 
 def test_supabase_connection_failure():
-    """Unexpected service errors are translated to HTTP 502."""
+    """予期しないサービスエラーは HTTP 502 に変換される。"""
 
     class FailingService(FakeSupabaseHealthService):
         def check(self) -> dict:

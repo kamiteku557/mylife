@@ -27,7 +27,7 @@ const EMPTY_MEMO: MemoInput = {
   tags: "",
 };
 
-/** Parse comma-separated tag text into unique, trimmed tag names. */
+/** カンマ区切りのタグ文字列を、前後空白除去・重複排除したタグ名配列へ変換する。 */
 function parseTagText(tagText: string): string[] {
   const unique = new Set<string>();
   return tagText
@@ -42,7 +42,7 @@ function parseTagText(tagText: string): string[] {
     });
 }
 
-/** Fetch JSON response from backend API and normalize non-2xx responses to Error. */
+/** バックエンド API の JSON を取得し、非 2xx 応答を Error に正規化する。 */
 async function fetchJson<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`${API_BASE_URL}${path}`, {
     headers: {
@@ -60,7 +60,7 @@ async function fetchJson<T>(path: string, init?: RequestInit): Promise<T> {
   return (await response.json()) as T;
 }
 
-/** Memo log CRUD screen for BL-006 scope. */
+/** BL-006 対応範囲のメモログ CRUD 画面。 */
 export function App() {
   const [memoLogs, setMemoLogs] = useState<MemoLog[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -125,7 +125,7 @@ export function App() {
         body_md: form.body_md,
         log_date: form.log_date,
         tags: parseTagText(form.tags),
-        // Temporary for BL-006 scope: session linking UI is not implemented yet.
+        // BL-006 の暫定対応: セッション紐づけ UI は未実装のため null 固定。
         related_session_id: null,
       };
 
