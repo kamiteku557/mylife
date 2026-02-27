@@ -1,107 +1,62 @@
-# mylife MVP バックログ
+# mylife 実行バックログ
 
-## Epic 1: 基盤構築
-1. [ ] E1-T1: Frontend/Backend モノレポ初期化
-- 受け入れ条件: React/FastAPI がローカル起動できる
+最終更新: 2026-02-27
 
-2. [ ] E1-T2: Supabase プロジェクト作成と接続設定
-- 受け入れ条件: APIからDB接続確認できる
+このファイルは「次に実装するタスク」の管理用。  
+要件の正本は `docs/requirements.md`。
 
-3. [ ] E1-T3: DBスキーマ作成（migration）
-- 受け入れ条件: spec記載の主要テーブルが作成される
+## 運用ルール
+1. 新機能/修正は、先に `docs/requirements.md` とこの `docs/backlog.md` を更新する。
+2. 実装着手時にタスクを `Ready` から `In Progress` に移動する。
+3. 完了時は受け入れ条件を確認し、`Done` に移動する。
+4. `Done` に移したら、対応する要件IDを `docs/requirements.md` で `[x]` にする。
+5. 最後に `main` へマージし、残タスクと新タスクをこのファイルへ反映する。
 
-4. [ ] E1-T4: 認証基盤（Supabase Auth: メールリンク）
-- 受け入れ条件: ログイン後のみAPI利用できる
+## Ready
+- [ ] BL-002 (RQ-OPS-004): Supabase Auth によるAPI保護を実装する
+  - 受け入れ条件: 未認証で主要APIにアクセスできない
+- [ ] BL-003 (RQ-POM-001): ポモドーロ設定API（GET/PUT）を実装する
+  - 受け入れ条件: 設定値を保存・取得できる
+- [ ] BL-004 (RQ-POM-002): ポモドーロセッション制御APIを実装する
+  - 受け入れ条件: start/pause/resume/finish の状態遷移が永続化される
+- [ ] BL-005 (RQ-POM-003): タイマーUIを実装する
+  - 受け入れ条件: UI操作で状態遷移できる
+- [ ] BL-006 (RQ-MEM-001, RQ-MEM-002): メモAPI/UIのCRUDを実装する
+  - 受け入れ条件: 作成・編集・閲覧・削除が可能
+- [ ] BL-007 (RQ-DIA-001, RQ-DIA-002): 日記API/UIを実装する
+  - 受け入れ条件: 日付単位で作成・更新・閲覧が可能
+- [ ] BL-008 (RQ-EXP-001, RQ-EXP-002, RQ-EXP-003): エクスポートAPI/UIを実装する
+  - 受け入れ条件: 指定期間・種別のMarkdown出力が可能
+- [ ] BL-009 (RQ-QLT-001, RQ-QLT-002, RQ-QLT-003): テスト基盤を追加する
+  - 受け入れ条件: Backend/Frontend/E2E の最低限テストが通る
+- [ ] BL-010 (RQ-QLT-004): モバイル表示の調整と確認を行う
+  - 受け入れ条件: iPhone幅で主要画面が崩れない
+- [ ] BL-011 (RQ-OPS-007): Supabase公開クライアントキーをpublishable keyへ移行する
+  - 受け入れ条件: 公開クライアント向け設定で anon key を使わない
 
-## Epic 2: 無料運用インフラ固定化
-1. [ ] E2-T1: Hosting構成を確定（Cloudflare Pages + Render Free + Supabase Free）
-- 受け入れ条件: specの構成とデプロイ先が一致し、Railwayを使わない
+## In Progress
+- [ ] なし
 
-2. [ ] E2-T2: Render Freeデプロイ（FastAPI）
-- 受け入れ条件: 公開URLでヘルスチェックAPIが200を返す
+## Done
+- [x] BL-001 (RQ-OPS-002): Supabase接続確認APIを追加し、DB疎通を実証する
+  - 証跡: `apps/backend/app/main.py`, `apps/backend/app/supabase_health.py`, `apps/backend/tests/test_supabase_connection_api.py`, `curl /api/v1/ops/supabase-db-health = 200`
+- [x] BL-D001 (RQ-OPS-001): Frontend/Backend モノレポ初期化
+  - 証跡: `README.md`, `apps/frontend/*`, `apps/backend/app/main.py`
+- [x] BL-D002 (RQ-OPS-003): 初期DBスキーマ migration 作成
+  - 証跡: `supabase/migrations/0001_init.sql`
+- [x] BL-D003 (RQ-OPS-005): Free Tier 構成を仕様に固定
+  - 証跡: `docs/spec.md`, `docs/deploy-minimal.md`, `render.yaml`
+- [x] BL-D004 (RQ-OPS-006): 環境変数テンプレート整備
+  - 証跡: `apps/backend/.env.example`, `apps/frontend/.env.example`
+- [x] BL-D005 (RQ-GRD-001): 添付ファイル機能をMVP外で固定
+  - 証跡: `docs/spec.md`
+- [x] BL-D006 (RQ-GRD-002): 集計オンデマンド方針を固定
+  - 証跡: `docs/spec.md`, `docs/free-tier-checklist.md`
+- [x] BL-D007 (RQ-GRD-003): 無料枠チェックリスト整備
+  - 証跡: `docs/free-tier-checklist.md`
 
-3. [ ] E2-T3: Cloudflare Pagesデプロイ（React）
-- 受け入れ条件: フロント公開URLからRender APIへ疎通できる
-
-4. [ ] E2-T4: 環境変数/シークレット整理
-- 受け入れ条件: `.env.example` があり、機密値はリポジトリに含まれない
-
-## Epic 3: ポモドーロ
-1. [ ] E3-T1: 設定API（取得/更新）
-- 受け入れ条件: focus/short/long/long_break_every を保存・取得できる
-
-2. [ ] E3-T2: セッション開始/停止/再開/終了API
-- 受け入れ条件: 状態遷移（running/paused/completed/cancelled）が正しく永続化される
-
-3. [ ] E3-T3: タイマーUIと状態遷移
-- 受け入れ条件: 作業と休憩の遷移、開始/一時停止/再開/終了が行える
-
-4. [ ] E3-T4: ポモドーロ集計API
-- 受け入れ条件: 日/週/月単位の合計作業時間・回数を返せる
-
-5. [ ] E3-T5: 集計画面（期間別）
-- 受け入れ条件: 期間切替で集計結果を表示できる
-
-## Epic 4: メモログ
-1. [ ] E4-T1: メモログCRUD API
-- 受け入れ条件: Markdown本文、日付、タグ、関連セッションを保存できる
-
-2. [ ] E4-T2: メモログ一覧/詳細/編集UI
-- 受け入れ条件: 作成・編集・閲覧・削除ができる
-
-3. [ ] E4-T3: タグ機能（作成/紐づけ/フィルタ）
-- 受け入れ条件: タグでメモを絞り込める
-
-4. [ ] E4-T4: メモ集計API + UI
-- 受け入れ条件: 期間別件数とタグ別件数を表示できる
-
-## Epic 5: 日記
-1. [ ] E5-T1: 日記CRUD API（日付キー）
-- 受け入れ条件: 日付単位で1件を保存・更新できる
-
-2. [ ] E5-T2: 日記画面（一覧/編集）
-- 受け入れ条件: 日記の作成・編集・閲覧が行える
-
-## Epic 6: Markdownエクスポート
-1. [ ] E6-T1: エクスポートAPI実装
-- 受け入れ条件: 期間・種別指定でMarkdownまたはzipを生成できる
-
-2. [ ] E6-T2: 設定画面からエクスポート実行
-- 受け入れ条件: UI操作でダウンロードできる
-
-3. [ ] E6-T3: 出力フォーマット検証（日本語/改行/リンク）
-- 受け入れ条件: 文字化けなし、見出し構造が崩れない
-
-4. [ ] E6-T4: ローカル保存運用ガイド作成
-- 受け入れ条件: 週1回バックアップ手順が `docs/` に記載される
-
-## Epic 7: 無料枠ガードレール
-1. [ ] E7-T1: 添付ファイル機能をMVP対象外として固定
-- 受け入れ条件: Storage使用を増やす機能がバックログ外になっている
-
-2. [ ] E7-T2: 集計処理をオンデマンド化（定期バッチなし）
-- 受け入れ条件: cron/スケジューラが不要な設計になっている
-
-3. [ ] E7-T3: 無料枠確認チェックリスト作成
-- 受け入れ条件: デプロイ前に確認する項目（Render/Supabase/Vercel or CF）が文書化される
-
-## Epic 8: 品質
-1. [ ] E8-T1: Backend 単体テスト
-- 受け入れ条件: 主要APIの正常系/異常系をカバーする
-
-2. [ ] E8-T2: Frontend コンポーネントテスト
-- 受け入れ条件: タイマー・メモ・日記の主要UI操作を検証する
-
-3. [ ] E8-T3: 最低限E2E（タイマー開始→記録確認）
-- 受け入れ条件: 主要導線が1本通る
-
-4. [ ] E8-T4: モバイル表示確認
-- 受け入れ条件: iPhone幅で主要画面が崩れない
-
-## MVP完了条件
-- [ ] ポモドーロ、メモ、日記の主要フローが実行可能
-- [ ] データが永続化される
-- [ ] Markdownエクスポート可能
-- [ ] モバイル幅で操作可能
-- [ ] Cloudflare Pages + Render Free + Supabase Free で動作する
-- [ ] Railway未使用で運用できる
+## 新規タスク追加テンプレート
+- [ ] BL-XXX (RQ-...): <タスク名>
+  - 背景: <なぜ必要か>
+  - 受け入れ条件: <完了の定義>
+  - 影響範囲: <backend/frontend/db/docs>
