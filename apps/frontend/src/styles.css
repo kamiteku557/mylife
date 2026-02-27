@@ -127,6 +127,11 @@ kbd {
   cursor: pointer;
 }
 
+.refresh-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
 .content {
   max-width: 860px;
   margin: 0 auto;
