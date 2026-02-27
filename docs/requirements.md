@@ -108,6 +108,10 @@
 - [ ] RQ-QLT-004: モバイル幅で主要画面が崩れない
   - 受け入れ条件: iPhone幅で主要画面が操作可能
   - 証跡: 未記入
+- [x] RQ-DOC-001: Docstring とコードコメントの記述言語ルールが定義されている
+  - 受け入れ条件: `AGENTS.md` にルールが明記され、実装コードの Docstring/コメントがルールに準拠している
+  - 対応タスク: BL-013
+  - 証跡: `AGENTS.md`, `apps/backend/app/main.py`, `apps/backend/app/memo_logs.py`, `apps/backend/app/supabase_health.py`, `apps/backend/tests/test_memo_logs_api.py`, `apps/backend/tests/test_supabase_connection_api.py`, `apps/frontend/src/App.tsx`
 
 ## MVP完了条件
 - [ ] ポモドーロ・メモ・日記の主要フローが実行可能
