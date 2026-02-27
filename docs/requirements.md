@@ -73,11 +73,21 @@
   - 受け入れ条件: 作成フォーム、タグ入力、時系列一覧、編集/削除操作がデザインと同等の画面機能で提供される
   - 対応タスク: BL-014
   - 証跡: 未記入
+- [x] RQ-MEM-007: メモログ表示設定をユーザーが調整できる
+  - 受け入れ条件: メモ記入画面での過去メモ表示数を設定でき、デフォルト値は20件である
+  - 受け入れ条件: メモ文字サイズを設定でき、デフォルト値は現行より大きい
+  - 対応タスク: BL-017
+  - 証跡: `apps/frontend/src/App.tsx`, `apps/frontend/src/styles.css`, `docs/backlog.md`
 - [x] RQ-MEM-005: メモ保存の体感遅延を許容範囲に抑える
   - 受け入れ条件: 初回保存時のボトルネックを特定し、不要な待ち時間を削減できる
   - 対応タスク: BL-012
   - 進捗: BL-012 Done (2026-02-27)
   - 証跡: `apps/backend/app/memo_logs.py`, `apps/backend/tests/test_memo_logs_api.py`, `apps/backend/tests/test_supabase_connection_api.py`
+- [x] RQ-SET-001: 設定画面でメモログ設定とセッション設定を一元管理できる
+  - 受け入れ条件: 設定画面から「メモログ」「セッション」の設定ブロックにアクセスできる
+  - 受け入れ条件: メモログ設定で表示数と文字サイズを変更できる
+  - 対応タスク: BL-017
+  - 証跡: `apps/frontend/src/App.tsx`, `apps/frontend/src/styles.css`, `docs/backlog.md`
 - [ ] RQ-DIA-001: 日記CRUD APIがある
   - 受け入れ条件: 日付キーで1日1件を保存・更新できる
   - 証跡: 未記入

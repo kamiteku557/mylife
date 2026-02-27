@@ -106,10 +106,13 @@ kbd {
 }
 
 .menu-tab {
+  border: none;
+  background: transparent;
   color: #575654;
   padding: 7px 18px;
   border-radius: 10px;
   font-size: 1.75rem;
+  cursor: pointer;
 }
 
 .menu-tab.active {
@@ -153,7 +156,7 @@ kbd {
   background: transparent;
   resize: vertical;
   color: #403f3d;
-  font-size: 1.25rem;
+  font-size: var(--memo-font-size, 18px);
   line-height: 1.55;
 }
 
@@ -348,7 +351,7 @@ kbd {
 .memo-content {
   padding-right: 70px;
   color: #383736;
-  font-size: 1rem;
+  font-size: var(--memo-font-size, 18px);
   line-height: 1.55;
 }
 
@@ -419,10 +422,72 @@ kbd {
   border-radius: 10px;
   background: #f9f8f6;
   color: #413f3b;
-  font-size: 1rem;
+  font-size: var(--memo-font-size, 18px);
   line-height: 1.55;
   padding: 12px;
   resize: vertical;
+}
+
+.settings-panel {
+  border: 1px solid #d8d6d1;
+  border-radius: 12px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  padding: 22px;
+}
+
+.settings-title {
+  margin: 0;
+  font-size: 1.8rem;
+}
+
+.settings-note {
+  margin: 10px 0 0;
+  color: #68645f;
+  font-size: 1rem;
+}
+
+.settings-card {
+  margin-top: 18px;
+  border: 1px solid #dfdcd6;
+  border-radius: 10px;
+  padding: 16px;
+  background: #f7f6f3;
+}
+
+.settings-card h2 {
+  margin: 0 0 10px;
+  font-size: 1.2rem;
+}
+
+.settings-field {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 10px;
+}
+
+.settings-field input {
+  width: 100px;
+  border: 1px solid #d2cdc4;
+  border-radius: 8px;
+  background: #fff;
+  color: #46423d;
+  padding: 6px 8px;
+}
+
+.settings-actions {
+  margin-top: 18px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.settings-notice {
+  margin: 0;
+  color: #4f5d4b;
+  font-size: 0.95rem;
 }
 
 .edit-actions {
@@ -480,6 +545,15 @@ kbd {
   }
 
   .memo-footer {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .settings-panel {
+    padding: 14px;
+  }
+
+  .settings-field {
     flex-direction: column;
     align-items: flex-start;
   }

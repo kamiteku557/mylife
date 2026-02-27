@@ -1,4 +1,12 @@
-import { FormEvent, KeyboardEvent, useCallback, useEffect, useMemo, useState } from "react";
+import {
+  FormEvent,
+  KeyboardEvent,
+  type CSSProperties,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 
 interface MemoLog {
   id: string;
@@ -12,11 +20,74 @@ interface MemoLog {
   updated_at: string;
 }
 
+interface AppSettings {
+  memoDisplayCount: number;
+  memoFontSizePx: number;
+}
+
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL?.trim() ?? "";
 const API_BASE_URL_ERROR =
   API_BASE_URL.length > 0
     ? ""
     : "VITE_API_BASE_URL is not configured. Set frontend environment variable to backend URL.";
+const SETTINGS_STORAGE_KEY = "mylife.settings.v1";
+const DEFAULT_MEMO_DISPLAY_COUNT = 20;
+const DEFAULT_MEMO_FONT_SIZE_PX = 18;
+const MIN_MEMO_DISPLAY_COUNT = 5;
+const MAX_MEMO_DISPLAY_COUNT = 100;
+const MIN_MEMO_FONT_SIZE_PX = 14;
+const MAX_MEMO_FONT_SIZE_PX = 32;
+const MEMO_FONT_SIZE_CSS_VAR = "--memo-font-size" as const;
+
+/** 設定値を最小/最大の範囲に丸める。 */
+function clampInt(value: number, minimum: number, maximum: number): number {
+  return Math.min(maximum, Math.max(minimum, Math.round(value)));
+}
+
+/** 設定の初期値を返す。 */
+function getDefaultSettings(): AppSettings {
+  return {
+    memoDisplayCount: DEFAULT_MEMO_DISPLAY_COUNT,
+    memoFontSizePx: DEFAULT_MEMO_FONT_SIZE_PX,
+  };
+}
+
+/** ローカル保存された設定を読み込み、欠損時は初期値を返す。 */
+function loadSettings(): AppSettings {
+  if (typeof window === "undefined") {
+    return getDefaultSettings();
+  }
+  const fallback = getDefaultSettings();
+  const raw = window.localStorage.getItem(SETTINGS_STORAGE_KEY);
+  if (!raw) {
+    return fallback;
+  }
+  try {
+    const parsed = JSON.parse(raw) as Partial<AppSettings>;
+    return {
+      memoDisplayCount: clampInt(
+        parsed.memoDisplayCount ?? fallback.memoDisplayCount,
+        MIN_MEMO_DISPLAY_COUNT,
+        MAX_MEMO_DISPLAY_COUNT,
+      ),
+      memoFontSizePx: clampInt(
+        parsed.memoFontSizePx ?? fallback.memoFontSizePx,
+        MIN_MEMO_FONT_SIZE_PX,
+        MAX_MEMO_FONT_SIZE_PX,
+      ),
+    };
+  } catch {
+    return fallback;
+  }
+}
+
+/** 設定をローカルへ永続化する。 */
+function saveSettings(settings: AppSettings): void {
+  if (typeof window === "undefined") {
+    return;
+  }
+  window.localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(settings));
+}
 
 /** カンマ区切りテキストを重複なしタグ配列へ変換する。 */
 function parseTagText(tagText: string): string[] {
@@ -166,9 +237,11 @@ async function fetchJson<T>(path: string, init?: RequestInit): Promise<T> {
   return (await response.json()) as T;
 }
 
-/** BL-014: v0モック準拠のメモログUI。 */
+/** BL-014, BL-017: メモログUIと設定UI。 */
 export function App() {
   const [memoLogs, setMemoLogs] = useState<MemoLog[]>([]);
+  const [activeView, setActiveView] = useState<"memo" | "session" | "settings">("memo");
+  const [settings, setSettings] = useState<AppSettings>(() => loadSettings());
   const [composerBody, setComposerBody] = useState("");
   const [composerTags, setComposerTags] = useState<string[]>([]);
   const [composerTagInput, setComposerTagInput] = useState("");
@@ -179,7 +252,12 @@ export function App() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
+  const [settingsNotice, setSettingsNotice] = useState("");
   const hasApiConfigError = API_BASE_URL_ERROR.length > 0;
+
+  useEffect(() => {
+    saveSettings(settings);
+  }, [settings]);
 
   const refreshMemos = useCallback(async () => {
     if (hasApiConfigError) {
@@ -374,6 +452,37 @@ export function App() {
     [memoLogs],
   );
 
+  const visibleMemos = useMemo(
+    () => renderedMemos.slice(0, settings.memoDisplayCount),
+    [renderedMemos, settings.memoDisplayCount],
+  );
+
+  const handleMemoDisplayCountChange = useCallback((rawValue: string) => {
+    const parsed = Number(rawValue);
+    const next = Number.isFinite(parsed)
+      ? clampInt(parsed, MIN_MEMO_DISPLAY_COUNT, MAX_MEMO_DISPLAY_COUNT)
+      : DEFAULT_MEMO_DISPLAY_COUNT;
+    setSettings((prev) => ({ ...prev, memoDisplayCount: next }));
+    setSettingsNotice("");
+  }, []);
+
+  const handleMemoFontSizeChange = useCallback((rawValue: string) => {
+    const parsed = Number(rawValue);
+    const next = Number.isFinite(parsed)
+      ? clampInt(parsed, MIN_MEMO_FONT_SIZE_PX, MAX_MEMO_FONT_SIZE_PX)
+      : DEFAULT_MEMO_FONT_SIZE_PX;
+    setSettings((prev) => ({ ...prev, memoFontSizePx: next }));
+    setSettingsNotice("");
+  }, []);
+
+  const handleResetSettings = useCallback(() => {
+    setSettings(getDefaultSettings());
+    setSettingsNotice("設定を初期値に戻しました。");
+  }, []);
+  const contentStyle = {
+    [MEMO_FONT_SIZE_CSS_VAR]: `${settings.memoFontSizePx}px`,
+  } as CSSProperties;
+
   return (
     <div className="page-shell">
       <header className="app-header">
@@ -387,206 +496,280 @@ export function App() {
           </div>
 
           <nav className="menu-tabs" aria-label="Main navigation">
-            <span className="menu-tab active">Memo</span>
-            <span className="menu-tab">Session</span>
+            <button
+              type="button"
+              className={`menu-tab${activeView === "memo" ? " active" : ""}`}
+              onClick={() => setActiveView("memo")}
+            >
+              Memo
+            </button>
+            <button
+              type="button"
+              className={`menu-tab${activeView === "session" ? " active" : ""}`}
+              onClick={() => setActiveView("session")}
+            >
+              Session
+            </button>
+            <button
+              type="button"
+              className={`menu-tab${activeView === "settings" ? " active" : ""}`}
+              onClick={() => setActiveView("settings")}
+            >
+              Settings
+            </button>
           </nav>
-
-          <button
-            type="button"
-            className="refresh-btn"
-            onClick={() => void refreshMemos()}
-            disabled={hasApiConfigError}
-          >
-            再読込
-          </button>
         </div>
       </header>
 
-      <main className="content">
-        <section className="composer" aria-label="Write a new memo">
-          <form onSubmit={handleCreate}>
-            <textarea
-              value={composerBody}
-              onChange={(event) => setComposerBody(event.target.value)}
-              onKeyDown={handleComposerKeyDown}
-              className="composer-textarea"
-              placeholder="Write your memo... (Markdown supported)"
-              rows={7}
-              required
-            />
-
-            <div className="composer-tags">
-              {composerTags.map((tag) => (
-                <span key={tag} className="tag-pill">
-                  <span className="tag-mark">#</span>
-                  {tag}
-                  <button
-                    type="button"
-                    className="tag-remove"
-                    onClick={() => setComposerTags((prev) => prev.filter((item) => item !== tag))}
-                    aria-label={`${tag} を削除`}
-                  >
-                    ×
-                  </button>
-                </span>
-              ))}
-              <span className="tag-input-wrap">
-                <span className="tag-plus" aria-hidden="true">
-                  +
-                </span>
-                <input
-                  value={composerTagInput}
-                  onChange={(event) => setComposerTagInput(event.target.value)}
-                  onKeyDown={handleComposerTagKeyDown}
-                  onBlur={addComposerTag}
-                  placeholder="Add tag..."
-                  className="tag-input"
+      <main className="content" style={contentStyle}>
+        {activeView === "memo" ? (
+          <>
+            <section className="composer" aria-label="Write a new memo">
+              <form onSubmit={handleCreate}>
+                <textarea
+                  value={composerBody}
+                  onChange={(event) => setComposerBody(event.target.value)}
+                  onKeyDown={handleComposerKeyDown}
+                  className="composer-textarea"
+                  placeholder="Write your memo... (Markdown supported)"
+                  rows={7}
+                  required
                 />
-              </span>
-            </div>
 
-            <div className="composer-footer">
-              <p className="composer-hint">
-                <kbd>Ctrl</kbd> + <kbd>Enter</kbd> to save
-              </p>
-              <button
-                type="submit"
-                className="save-btn"
-                disabled={submitting || !composerBody.trim()}
-              >
-                <svg viewBox="0 0 24 24" className="save-icon" aria-hidden="true">
-                  <path d="m3 11 18-8-8 18-2.5-7.5z" />
-                  <path d="M10.5 13.5 21 3" />
-                </svg>
-                Save
-              </button>
-            </div>
-          </form>
-        </section>
-
-        {error ? <p className="error-banner">{error}</p> : null}
-
-        {loading ? <p className="status-text">Loading...</p> : null}
-
-        {!loading && renderedMemos.length === 0 ? (
-          <div className="empty-state">
-            <p className="empty-title">No memos yet</p>
-            <p className="empty-note">Start writing above to create your first memo.</p>
-          </div>
-        ) : null}
-
-        <section aria-label="Memo log" className="timeline">
-          {renderedMemos.map((memo) => {
-            const isEditing = editingId === memo.id;
-            return (
-              <article key={memo.id} className="memo-row">
-                {isEditing ? (
-                  <>
-                    <textarea
-                      value={editBody}
-                      onChange={(event) => setEditBody(event.target.value)}
-                      rows={6}
-                      className="edit-textarea"
+                <div className="composer-tags">
+                  {composerTags.map((tag) => (
+                    <span key={tag} className="tag-pill">
+                      <span className="tag-mark">#</span>
+                      {tag}
+                      <button
+                        type="button"
+                        className="tag-remove"
+                        onClick={() =>
+                          setComposerTags((prev) => prev.filter((item) => item !== tag))
+                        }
+                        aria-label={`${tag} を削除`}
+                      >
+                        ×
+                      </button>
+                    </span>
+                  ))}
+                  <span className="tag-input-wrap">
+                    <span className="tag-plus" aria-hidden="true">
+                      +
+                    </span>
+                    <input
+                      value={composerTagInput}
+                      onChange={(event) => setComposerTagInput(event.target.value)}
+                      onKeyDown={handleComposerTagKeyDown}
+                      onBlur={addComposerTag}
+                      placeholder="Add tag..."
+                      className="tag-input"
                     />
+                  </span>
+                </div>
 
-                    <div className="composer-tags">
-                      {editTags.map((tag) => (
-                        <span key={tag} className="tag-pill">
-                          <span className="tag-mark">#</span>
-                          {tag}
+                <div className="composer-footer">
+                  <p className="composer-hint">
+                    <kbd>Ctrl</kbd> + <kbd>Enter</kbd> to save
+                  </p>
+                  <button
+                    type="submit"
+                    className="save-btn"
+                    disabled={submitting || !composerBody.trim()}
+                  >
+                    <svg viewBox="0 0 24 24" className="save-icon" aria-hidden="true">
+                      <path d="m3 11 18-8-8 18-2.5-7.5z" />
+                      <path d="M10.5 13.5 21 3" />
+                    </svg>
+                    Save
+                  </button>
+                </div>
+              </form>
+            </section>
+
+            {error ? <p className="error-banner">{error}</p> : null}
+
+            {loading ? <p className="status-text">Loading...</p> : null}
+
+            {!loading && renderedMemos.length === 0 ? (
+              <div className="empty-state">
+                <p className="empty-title">No memos yet</p>
+                <p className="empty-note">Start writing above to create your first memo.</p>
+              </div>
+            ) : null}
+
+            <p className="status-text">
+              直近 {visibleMemos.length} / {renderedMemos.length} 件を表示中
+            </p>
+
+            <section aria-label="Memo log" className="timeline">
+              {visibleMemos.map((memo) => {
+                const isEditing = editingId === memo.id;
+                return (
+                  <article key={memo.id} className="memo-row">
+                    {isEditing ? (
+                      <>
+                        <textarea
+                          value={editBody}
+                          onChange={(event) => setEditBody(event.target.value)}
+                          rows={6}
+                          className="edit-textarea"
+                        />
+
+                        <div className="composer-tags">
+                          {editTags.map((tag) => (
+                            <span key={tag} className="tag-pill">
+                              <span className="tag-mark">#</span>
+                              {tag}
+                              <button
+                                type="button"
+                                className="tag-remove"
+                                onClick={() =>
+                                  setEditTags((prev) => prev.filter((item) => item !== tag))
+                                }
+                                aria-label={`${tag} を削除`}
+                              >
+                                ×
+                              </button>
+                            </span>
+                          ))}
+                          <span className="tag-input-wrap">
+                            <span className="tag-plus" aria-hidden="true">
+                              +
+                            </span>
+                            <input
+                              value={editTagInput}
+                              onChange={(event) => setEditTagInput(event.target.value)}
+                              onKeyDown={handleEditTagKeyDown}
+                              onBlur={addEditTag}
+                              placeholder="Add tag..."
+                              className="tag-input"
+                            />
+                          </span>
+                        </div>
+
+                        <div className="edit-actions">
                           <button
                             type="button"
-                            className="tag-remove"
-                            onClick={() =>
-                              setEditTags((prev) => prev.filter((item) => item !== tag))
-                            }
-                            aria-label={`${tag} を削除`}
+                            className="save-btn"
+                            onClick={() => void handleSaveEdit()}
                           >
-                            ×
+                            Save
                           </button>
-                        </span>
-                      ))}
-                      <span className="tag-input-wrap">
-                        <span className="tag-plus" aria-hidden="true">
-                          +
-                        </span>
-                        <input
-                          value={editTagInput}
-                          onChange={(event) => setEditTagInput(event.target.value)}
-                          onKeyDown={handleEditTagKeyDown}
-                          onBlur={addEditTag}
-                          placeholder="Add tag..."
-                          className="tag-input"
+                          <button type="button" className="row-icon-btn" onClick={cancelEditing}>
+                            Cancel
+                          </button>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <div className="row-toolbar">
+                          <button
+                            type="button"
+                            className="row-icon-btn"
+                            onClick={() => startEditing(memo)}
+                          >
+                            <svg viewBox="0 0 24 24" aria-hidden="true">
+                              <path d="M3 17.25V21h3.75L19.8 7.95 16.05 4.2z" />
+                              <path d="m14.5 5.75 3.75 3.75" />
+                            </svg>
+                          </button>
+                          <button
+                            type="button"
+                            className="row-icon-btn"
+                            onClick={() => void handleDelete(memo.id)}
+                          >
+                            <svg viewBox="0 0 24 24" aria-hidden="true">
+                              <path d="M4 7h16" />
+                              <path d="M10 11v6" />
+                              <path d="M14 11v6" />
+                              <path d="M6 7l1 13h10l1-13" />
+                              <path d="M9 7V4h6v3" />
+                            </svg>
+                          </button>
+                        </div>
+
+                        <div
+                          className="memo-content"
+                          dangerouslySetInnerHTML={{ __html: memo.renderedBody }}
                         />
-                      </span>
-                    </div>
 
-                    <div className="edit-actions">
-                      <button
-                        type="button"
-                        className="save-btn"
-                        onClick={() => void handleSaveEdit()}
-                      >
-                        Save
-                      </button>
-                      <button type="button" className="row-icon-btn" onClick={cancelEditing}>
-                        Cancel
-                      </button>
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <div className="row-toolbar">
-                      <button
-                        type="button"
-                        className="row-icon-btn"
-                        onClick={() => startEditing(memo)}
-                      >
-                        <svg viewBox="0 0 24 24" aria-hidden="true">
-                          <path d="M3 17.25V21h3.75L19.8 7.95 16.05 4.2z" />
-                          <path d="m14.5 5.75 3.75 3.75" />
-                        </svg>
-                      </button>
-                      <button
-                        type="button"
-                        className="row-icon-btn"
-                        onClick={() => void handleDelete(memo.id)}
-                      >
-                        <svg viewBox="0 0 24 24" aria-hidden="true">
-                          <path d="M4 7h16" />
-                          <path d="M10 11v6" />
-                          <path d="M14 11v6" />
-                          <path d="M6 7l1 13h10l1-13" />
-                          <path d="M9 7V4h6v3" />
-                        </svg>
-                      </button>
-                    </div>
+                        <div className="memo-footer">
+                          <div className="memo-tags">
+                            {memo.tags.map((tag) => (
+                              <span key={tag} className="tag-pill outline">
+                                <span className="tag-mark">#</span>
+                                {tag}
+                              </span>
+                            ))}
+                          </div>
+                          <div className="memo-date">
+                            <time dateTime={memo.created_at}>{memo.absoluteDate}</time>
+                            {memo.relativeDate ? <span>{` / ${memo.relativeDate}`}</span> : null}
+                          </div>
+                        </div>
+                      </>
+                    )}
+                  </article>
+                );
+              })}
+            </section>
+          </>
+        ) : null}
 
-                    <div
-                      className="memo-content"
-                      dangerouslySetInnerHTML={{ __html: memo.renderedBody }}
-                    />
+        {activeView === "session" ? (
+          <section className="settings-panel" aria-label="Session view">
+            <h1 className="settings-title">Session</h1>
+            <p className="settings-note">セッション画面は次のタスクで実装予定です。</p>
+          </section>
+        ) : null}
 
-                    <div className="memo-footer">
-                      <div className="memo-tags">
-                        {memo.tags.map((tag) => (
-                          <span key={tag} className="tag-pill outline">
-                            <span className="tag-mark">#</span>
-                            {tag}
-                          </span>
-                        ))}
-                      </div>
-                      <div className="memo-date">
-                        <time dateTime={memo.created_at}>{memo.absoluteDate}</time>
-                        {memo.relativeDate ? <span>{` / ${memo.relativeDate}`}</span> : null}
-                      </div>
-                    </div>
-                  </>
-                )}
-              </article>
-            );
-          })}
-        </section>
+        {activeView === "settings" ? (
+          <section className="settings-panel" aria-label="Settings">
+            <h1 className="settings-title">Settings</h1>
+            <p className="settings-note">メモログとセッションの設定をここで管理します。</p>
+
+            <section className="settings-card" aria-label="Memo log settings">
+              <h2>Memo Log</h2>
+              <label className="settings-field" htmlFor="memo-display-count">
+                <span>メモ記入画面での過去メモ表示数</span>
+                <input
+                  id="memo-display-count"
+                  type="number"
+                  min={MIN_MEMO_DISPLAY_COUNT}
+                  max={MAX_MEMO_DISPLAY_COUNT}
+                  value={settings.memoDisplayCount}
+                  onChange={(event) => handleMemoDisplayCountChange(event.target.value)}
+                />
+              </label>
+              <label className="settings-field" htmlFor="memo-font-size">
+                <span>メモの文字サイズ (px)</span>
+                <input
+                  id="memo-font-size"
+                  type="number"
+                  min={MIN_MEMO_FONT_SIZE_PX}
+                  max={MAX_MEMO_FONT_SIZE_PX}
+                  value={settings.memoFontSizePx}
+                  onChange={(event) => handleMemoFontSizeChange(event.target.value)}
+                />
+              </label>
+            </section>
+
+            <section className="settings-card" aria-label="Session settings">
+              <h2>Session</h2>
+              <p className="settings-note">
+                セッション関連の詳細設定は、セッション機能実装タスクで順次追加します。
+              </p>
+            </section>
+
+            <div className="settings-actions">
+              <button type="button" className="save-btn" onClick={handleResetSettings}>
+                設定を初期値に戻す
+              </button>
+              {settingsNotice ? <p className="settings-notice">{settingsNotice}</p> : null}
+            </div>
+          </section>
+        ) : null}
       </main>
     </div>
   );

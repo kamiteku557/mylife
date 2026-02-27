@@ -44,6 +44,8 @@
   - 影響範囲: frontend/docs
 
 ## Done
+- [x] BL-017 (RQ-MEM-007, RQ-SET-001): 設定画面を追加しメモログ表示設定を実装する
+  - 証跡: `apps/frontend/src/App.tsx`, `apps/frontend/src/styles.css`, `docs/requirements.md`
 - [x] BL-016 (RQ-OPS-009): Frontend の API ベースURL未設定時にフェイルファストする
   - 証跡: `apps/frontend/src/App.tsx`, `apps/frontend/src/styles.css`, `docs/deploy-minimal.md`
 - [x] BL-013 (RQ-DOC-001): Docstring とコードコメントの記述ルール整備と既存実装の準拠対応
