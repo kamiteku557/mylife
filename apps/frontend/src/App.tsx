@@ -33,12 +33,16 @@ interface PomodoroSettings {
   long_break_every: number;
 }
 
+type ThemeName = "light" | "dark";
+type ThemePreference = ThemeName | "system";
+
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL?.trim() ?? "";
 const API_BASE_URL_ERROR =
   API_BASE_URL.length > 0
     ? ""
     : "VITE_API_BASE_URL is not configured. Set frontend environment variable to backend URL.";
 const SETTINGS_STORAGE_KEY = "mylife.settings.v1";
+const THEME_PREFERENCE_STORAGE_KEY = "mylife.theme-preference.v1";
 const DEFAULT_MEMO_DISPLAY_COUNT = 20;
 const DEFAULT_MEMO_FONT_SIZE_PX = 18;
 const MIN_MEMO_DISPLAY_COUNT = 5;
@@ -95,6 +99,34 @@ function saveSettings(settings: AppSettings): void {
     return;
   }
   window.localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(settings));
+}
+
+/** OS設定から現在のテーマを判定する。 */
+function getSystemTheme(): ThemeName {
+  if (typeof window === "undefined") {
+    return "light";
+  }
+  return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+}
+
+/** 保存済みテーマ設定を読み込み、無効値は system 扱いにする。 */
+function loadThemePreference(): ThemePreference {
+  if (typeof window === "undefined") {
+    return "system";
+  }
+  const raw = window.localStorage.getItem(THEME_PREFERENCE_STORAGE_KEY);
+  if (raw === "light" || raw === "dark" || raw === "system") {
+    return raw;
+  }
+  return "system";
+}
+
+/** テーマ設定をローカルへ永続化する。 */
+function saveThemePreference(preference: ThemePreference): void {
+  if (typeof window === "undefined") {
+    return;
+  }
+  window.localStorage.setItem(THEME_PREFERENCE_STORAGE_KEY, preference);
 }
 
 /** カンマ区切りテキストを重複なしタグ配列へ変換する。 */
@@ -250,6 +282,13 @@ export function App() {
   const [memoLogs, setMemoLogs] = useState<MemoLog[]>([]);
   const [activeView, setActiveView] = useState<"memo" | "session" | "settings">("memo");
   const [settings, setSettings] = useState<AppSettings>(() => loadSettings());
+  const [themePreference, setThemePreference] = useState<ThemePreference>(() =>
+    loadThemePreference(),
+  );
+  const [theme, setTheme] = useState<ThemeName>(() => {
+    const preference = loadThemePreference();
+    return preference === "system" ? getSystemTheme() : preference;
+  });
   const [composerBody, setComposerBody] = useState("");
   const [composerTags, setComposerTags] = useState<string[]>([]);
   const [composerTagInput, setComposerTagInput] = useState("");
@@ -269,6 +308,28 @@ export function App() {
   useEffect(() => {
     saveSettings(settings);
   }, [settings]);
+
+  useEffect(() => {
+    saveThemePreference(themePreference);
+  }, [themePreference]);
+
+  useEffect(() => {
+    if (themePreference !== "system") {
+      setTheme(themePreference);
+      return;
+    }
+    setTheme(getSystemTheme());
+    const media = window.matchMedia("(prefers-color-scheme: dark)");
+    const handleThemeChange = (event: MediaQueryListEvent) => {
+      setTheme(event.matches ? "dark" : "light");
+    };
+    media.addEventListener("change", handleThemeChange);
+    return () => media.removeEventListener("change", handleThemeChange);
+  }, [themePreference]);
+
+  useEffect(() => {
+    document.documentElement.setAttribute("data-theme", theme);
+  }, [theme]);
 
   const refreshMemos = useCallback(async () => {
     if (hasApiConfigError) {
@@ -508,7 +569,15 @@ export function App() {
 
   const handleResetSettings = useCallback(() => {
     setSettings(getDefaultSettings());
+    setThemePreference("system");
     setSettingsNotice("設定を初期値に戻しました。");
+  }, []);
+
+  const handleThemeToggle = useCallback(() => {
+    setThemePreference((previous) => {
+      const current = previous === "system" ? getSystemTheme() : previous;
+      return current === "dark" ? "light" : "dark";
+    });
   }, []);
 
   const handlePomodoroSettingChange = useCallback(
@@ -595,6 +664,9 @@ export function App() {
               Settings
             </button>
           </nav>
+          <button type="button" className="theme-toggle-btn" onClick={handleThemeToggle}>
+            {theme === "dark" ? "Light" : "Dark"}
+          </button>
         </div>
       </header>
 
