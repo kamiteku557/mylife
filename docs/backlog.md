@@ -50,17 +50,6 @@
   - 影響範囲: docs/frontend/backend
 
 ## In Progress
-- [ ] BL-028 (RQ-QLT-005): ダークモード切替（OS連動 + 手動上書き）を実装する
-  - 背景: 夜間利用時の視認性と疲労軽減のため、テーマを環境に追従しつつ任意で固定したい
-  - 受け入れ条件: 初期テーマは `prefers-color-scheme` に従い、ヘッダー操作で Light/Dark を即時切替できる
-  - 受け入れ条件: 手動選択テーマはローカル保存され、再訪時に復元される
-  - 影響範囲: frontend/docs
-- [ ] BL-029 (RQ-QLT-005): ダークモード実装のトークン整理とテーマロジック分離を行う
-  - 背景: Light/Darkの分岐が増えて保守コストが上がるため、テーマ責務を整理して変更容易性を高めたい
-  - 受け入れ条件: CSSの直値色指定をテーマトークンへ統一し、重複トークンを削減できる
-  - 受け入れ条件: テーマ状態管理を `App.tsx` から `useTheme` へ切り出し、UIロジックとの責務分離ができる
-  - 受け入れ条件: 既存のテーマ切替挙動（OS連動 + 手動上書き + 永続化）を維持できる
-  - 影響範囲: frontend/docs
 - [ ] BL-014 (RQ-MEM-006): メモログUIをデザインモック準拠に更新する
   - 背景: メモ機能は実装済みだが、画面体験がデザインモックと乖離している
   - 受け入れ条件: 作成フォーム、タグ入力、時系列一覧、編集/削除操作をモック同等の画面機能で提供する
@@ -74,6 +63,10 @@
   - 影響範囲: frontend/docs
 
 ## Done
+- [x] BL-029 (RQ-QLT-005): ダークモード実装のトークン整理とテーマロジック分離を行う
+  - 証跡: `apps/frontend/src/App.tsx`, `apps/frontend/src/styles.css`, `apps/frontend/src/useTheme.ts`, `docs/backlog.md`, `docs/requirements.md`
+- [x] BL-028 (RQ-QLT-005): ダークモード切替（OS連動 + 手動上書き）を実装する
+  - 証跡: `apps/frontend/src/App.tsx`, `apps/frontend/src/styles.css`, `docs/backlog.md`, `docs/requirements.md`
 - [x] BL-023 (RQ-QLT-004): スマホ表示でヘッダーが見えない不具合を修正する
   - 証跡: `apps/frontend/src/styles.css`, `docs/backlog.md`, `docs/requirements.md`
 - [x] BL-019 (RQ-POM-003): セッション遷移と編集中UXの不具合を修正する

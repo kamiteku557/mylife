@@ -150,12 +150,12 @@
   - 受け入れ条件: iPhone幅で主要画面が操作可能
   - 対応タスク: BL-010, BL-023, BL-024
   - 証跡: 未記入
-- [ ] RQ-QLT-005: ダークモードをOS連動 + 手動上書きで切り替えできる
+- [x] RQ-QLT-005: ダークモードをOS連動 + 手動上書きで切り替えできる
   - 受け入れ条件: 初期表示は `prefers-color-scheme` を反映し、ユーザー操作で Light/Dark を切り替えできる
   - 受け入れ条件: 手動選択したテーマは永続化され、再訪時に同じテーマで表示される
   - 受け入れ条件: テーマ切替実装は配色トークンが整理され、テーマ状態管理ロジックがUI本体から分離されている
   - 対応タスク: BL-028, BL-029
-  - 証跡: 未記入
+  - 証跡: `apps/frontend/src/App.tsx`, `apps/frontend/src/styles.css`, `apps/frontend/src/useTheme.ts`, `docs/backlog.md`
 - [x] RQ-DOC-001: Docstring とコードコメントの記述言語ルールが定義されている
   - 受け入れ条件: `AGENTS.md` にルールが明記され、実装コードの Docstring/コメントがルールに準拠している
   - 対応タスク: BL-013
