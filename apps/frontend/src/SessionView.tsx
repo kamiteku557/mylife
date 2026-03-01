@@ -1,6 +1,6 @@
 import { type KeyboardEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ensurePushSubscription } from "./pushNotifications";
-import { elapsedWholeSeconds } from "./SessionViewTimer";
+import { elapsedWholeSeconds, shouldRunResumeSync } from "./SessionViewTimer";
 
 type SessionPhase = "focus" | "break";
 type TimerStatus = "ready" | "running" | "paused";
@@ -63,6 +63,7 @@ interface SessionGroup {
 }
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL?.trim() ?? "";
+const RESUME_SERVER_SYNC_MIN_INTERVAL_MS = 2500;
 
 interface NotificationSoundPlayer {
   prepare: () => Promise<void>;
@@ -312,6 +313,8 @@ export function SessionView({ settings }: SessionViewProps) {
   const notifiedZeroSessionIdRef = useRef<string | null>(null);
   const notifiedOverrunStepRef = useRef(0);
   const lastTickEpochMsRef = useRef<number | null>(null);
+  const resumeServerSyncInFlightRef = useRef(false);
+  const lastResumeServerSyncEpochMsRef = useRef<number | null>(null);
 
   const focusSeconds = (settings?.focus_minutes ?? 25) * 60;
   const shortBreakSeconds = (settings?.short_break_minutes ?? 5) * 60;
@@ -374,6 +377,16 @@ export function SessionView({ settings }: SessionViewProps) {
     }
   }, [resetToReady]);
 
+  /** 復帰直後のズレ補正のために current セッションのみ再同期する。 */
+  const refreshCurrentFromServer = useCallback(async () => {
+    const current = await fetchJson<ServerSession | null>("/api/v1/pomodoro/current");
+    if (current) {
+      setTimer(toTimerStateFromServer(current));
+      return;
+    }
+    resetToReady("focus", false);
+  }, [resetToReady]);
+
   /** 実行中タイマーを実経過時間で補正する。 */
   const syncTimerByElapsed = useCallback(() => {
     const nowEpochMs = Date.now();
@@ -395,6 +408,34 @@ export function SessionView({ settings }: SessionViewProps) {
       return { ...prev, remainingSec: prev.remainingSec - elapsedSec };
     });
   }, []);
+
+  /** 復帰イベントでローカル補正 + サーバー再同期を実行する。 */
+  const syncTimerOnResume = useCallback(() => {
+    syncTimerByElapsed();
+
+    const nowEpochMs = Date.now();
+    const shouldRunServerSync = shouldRunResumeSync({
+      hasActiveSession: timer.status === "running" || timer.status === "paused",
+      inFlight: resumeServerSyncInFlightRef.current,
+      lastSyncEpochMs: lastResumeServerSyncEpochMsRef.current,
+      nowEpochMs,
+      minIntervalMs: RESUME_SERVER_SYNC_MIN_INTERVAL_MS,
+    });
+    if (!shouldRunServerSync) {
+      return;
+    }
+
+    lastResumeServerSyncEpochMsRef.current = nowEpochMs;
+    resumeServerSyncInFlightRef.current = true;
+    void refreshCurrentFromServer()
+      .catch((eventualError) => {
+        // 復帰時再同期の失敗はユーザー操作を止めない。
+        console.warn("failed to sync timer from server on resume", eventualError);
+      })
+      .finally(() => {
+        resumeServerSyncInFlightRef.current = false;
+      });
+  }, [refreshCurrentFromServer, syncTimerByElapsed, timer.status]);
 
   const persistSessionMeta = useCallback(
     async (nextTitle: string, nextTags: string[]) => {
@@ -456,10 +497,10 @@ export function SessionView({ settings }: SessionViewProps) {
       if (document.hidden) {
         return;
       }
-      syncTimerByElapsed();
+      syncTimerOnResume();
     };
     const handleFocus = () => {
-      syncTimerByElapsed();
+      syncTimerOnResume();
     };
     document.addEventListener("visibilitychange", handleVisibilityChange);
     window.addEventListener("focus", handleFocus);
@@ -469,7 +510,7 @@ export function SessionView({ settings }: SessionViewProps) {
       window.removeEventListener("focus", handleFocus);
       window.removeEventListener("pageshow", handleFocus);
     };
-  }, [syncTimerByElapsed]);
+  }, [syncTimerOnResume]);
 
   useEffect(() => {
     notifiedZeroSessionIdRef.current = null;

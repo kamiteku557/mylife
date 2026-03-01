@@ -51,6 +51,18 @@
   - 影響範囲: docs/frontend/backend
 
 ## In Progress
+- [ ] BL-039 (RQ-POM-008): iOS PWA 復帰時のタイマー再同期をサーバー基準で強化する
+  - 背景: 復帰時のローカル補正のみでは、iOS PWA のライフサイクル差異で表示時刻が追従しないケースが残る
+  - 受け入れ条件: `visibilitychange` / `focus` / `pageshow` 復帰時に `/api/v1/pomodoro/current` を再取得して表示時刻を補正できる
+  - 受け入れ条件: 復帰イベント連打で API を過剰に叩かないように同期呼び出しを間引ける
+  - 受け入れ条件: 復帰時同期を追加しても既存の開始/停止/再開フローとテストが壊れない
+  - 影響範囲: frontend/docs
+- [ ] BL-040 (RQ-OPS-015): 背景Push dispatch の無料枠運用を安定化する
+  - 背景: GitHub Actions から Render Free を叩く際、コールドスタートでタイムアウトして dispatch 失敗が発生する
+  - 受け入れ条件: dispatch workflow に retry と十分な timeout を設定し、単発失敗で通知配信が停止しない
+  - 受け入れ条件: schedule 実行の偏りを抑えるため cron 分散を行う
+  - 受け入れ条件: workflow ログで dispatch 応答本文を確認できる
+  - 影響範囲: ci/docs
 - [ ] BL-037 (RQ-POM-006): iOS PWA 復帰時のタイマー追従を実装する
   - 背景: iOS の PWA で別アプリを開くと JS タイマーが停止し、復帰直後の表示時刻が実時間より遅れる
   - 受け入れ条件: 実行中セッションで、復帰直後に経過秒数を反映した時刻へ補正される

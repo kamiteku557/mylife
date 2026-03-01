@@ -17,7 +17,7 @@
 - Frontend表示でhealth JSONを取得できるか
 - Render freeのコールドスタート遅延を許容
 
-## Push通知（BL-038）
+## Push通知（BL-038 / BL-040）
 1. Render 側に以下の環境変数を設定する
    - `WEB_PUSH_VAPID_PUBLIC_KEY`
    - `WEB_PUSH_VAPID_PRIVATE_KEY`
@@ -27,5 +27,7 @@
 3. GitHub Actions secret を設定する
    - `PUSH_DISPATCH_URL`（`https://<backend-domain>/api/v1/ops/push-dispatch`）
    - `PUSH_DISPATCH_TOKEN`（Render の `PUSH_DISPATCH_TOKEN` と同値）
-4. `.github/workflows/push-dispatch.yml` の schedule（5分）で dispatch が実行されることを確認する
-5. 無料運用では通知遅延（最大5分）を許容する
+4. `.github/workflows/push-dispatch.yml` の schedule（5分、`2-59/5`）で dispatch が実行されることを確認する
+5. dispatch は `curl --retry` と `--max-time 90` を使い、Render Free のコールドスタートを許容する
+6. GitHub Actions のログで dispatch API 応答JSON（`checked_sessions` / `sent_notifications`）を確認する
+7. 無料運用では通知遅延（最大5分）を許容する

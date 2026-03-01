@@ -30,6 +30,7 @@
 - [ ] 重い定期バッチを導入していない（集計はオンデマンド）
 - [ ] 無料枠を超える機能追加時は事前に見積もる
 - [ ] Push dispatch は GitHub Actions の 5分 schedule で運用し、通知遅延（最大5分）を許容している
+- [ ] Push dispatch workflow は retry / timeout（`--retry`, `--max-time 90`）が設定され、Renderコールドスタートで即失敗しない
 - [ ] GitHub Actions の実行時間（minutes）が無料枠内に収まるよう監視している
 - [ ] Render / Frontend / GitHub Actions の `PUSH_DISPATCH_TOKEN` が一致している
 
