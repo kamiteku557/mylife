@@ -46,10 +46,13 @@
   - 対応タスク: BL-018
   - 証跡: `Makefile`, `package.json`, `README.md`
 - [ ] RQ-OPS-011: worktree 利用時の依存セットアップとポート運用を標準化する
+  - 受け入れ条件: 開発は worktree 利用を基本とする運用方針が文書化される
   - 受け入れ条件: 新規 worktree 作成直後に実施すべき初期化コマンド（frontend/backend）が手順化される
+  - 受け入れ条件: 各 worktree で `pnpm install` と `cd apps/backend && uv sync` を実施する手順が明記される
+  - 受け入れ条件: 各 worktree で pre-commit hook を有効化（`pnpm precommit:install`）する手順が明記される
   - 受け入れ条件: worktree ごとの開発サーバーポート割り当てルールが定義される
   - 受け入れ条件: 最低限の事前確認（`eslint -v`, `lsof` など）で作業開始可否を判定できる
-  - 対応タスク: BL-027
+  - 対応タスク: BL-027, BL-036
   - 証跡: 未記入
 - [x] RQ-OPS-012: オフライン同期キューを再利用可能な共通モジュールとして提供する
   - 受け入れ条件: localStorage 永続化 + 同期待ちキュー + 再送制御を抽象化した共通モジュールが frontend で利用できる
@@ -204,8 +207,9 @@
   - 受け入れ条件: 開発フローに「各BLで単体/結合/E2Eの追加・更新要否を判定し、必要分を同一タスク内で追加する」ルールが明記されている
   - 受け入れ条件: 完了前チェックでテスト追加有無を確認できる
   - 受け入れ条件: pre-commit 実行時に Backend/Frontend の全テストが自動実行される
-  - 対応タスク: BL-035
-  - 証跡: `docs/development-workflow.md`, `.pre-commit-config.yaml`, `pnpm precommit:run`
+  - 受け入れ条件: `main` マージ前に E2E テスト（`pnpm test:e2e`）を実行するルールが明記される
+  - 対応タスク: BL-035, BL-036
+  - 証跡: `docs/development-workflow.md`, `.pre-commit-config.yaml`, `pnpm precommit:run`, `pnpm test:e2e`
 - [x] RQ-DOC-001: Docstring とコードコメントの記述言語ルールが定義されている
   - 受け入れ条件: `AGENTS.md` にルールが明記され、実装コードの Docstring/コメントがルールに準拠している
   - 対応タスク: BL-013
