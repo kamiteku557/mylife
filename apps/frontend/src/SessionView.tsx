@@ -62,6 +62,63 @@ interface SessionGroup {
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL?.trim() ?? "";
 
+interface NotificationSoundPlayer {
+  prepare: () => Promise<void>;
+  play: () => void;
+}
+
+/** 通知音プレイヤーを返す。将来の音声ファイル実装差し替え点。 */
+function createNotificationSoundPlayer(): NotificationSoundPlayer {
+  let audioContext: AudioContext | null = null;
+
+  const resolveAudioContextCtor = () => {
+    if (typeof window === "undefined") {
+      return null;
+    }
+    return (
+      window.AudioContext ??
+      (window as Window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext ??
+      null
+    );
+  };
+
+  return {
+    async prepare() {
+      const contextCtor = resolveAudioContextCtor();
+      if (!contextCtor) {
+        return;
+      }
+      if (!audioContext) {
+        audioContext = new contextCtor();
+      }
+      if (audioContext.state === "suspended") {
+        await audioContext.resume();
+      }
+    },
+    play() {
+      const context = audioContext;
+      if (!context || context.state !== "running") {
+        return;
+      }
+      const now = context.currentTime;
+      const beepTimings = [0, 0.2];
+      beepTimings.forEach((offset) => {
+        const oscillator = context.createOscillator();
+        const gain = context.createGain();
+        oscillator.type = "sine";
+        oscillator.frequency.setValueAtTime(880, now + offset);
+        gain.gain.setValueAtTime(0.0001, now + offset);
+        gain.gain.exponentialRampToValueAtTime(0.18, now + offset + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + offset + 0.14);
+        oscillator.connect(gain);
+        gain.connect(context.destination);
+        oscillator.start(now + offset);
+        oscillator.stop(now + offset + 0.16);
+      });
+    },
+  };
+}
+
 /** 現在の設定値から初期タイマー状態を生成する。 */
 function createInitialTimerState(settings: SessionSettings | null): TimerState {
   return {
@@ -238,7 +295,12 @@ export function SessionView({ settings }: SessionViewProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [actionPending, setActionPending] = useState(false);
-  const transitioningRef = useRef(false);
+  const notificationPermissionRequestedRef = useRef(false);
+  const notificationSoundPlayerRef = useRef<NotificationSoundPlayer>(
+    createNotificationSoundPlayer(),
+  );
+  const notifiedZeroSessionIdRef = useRef<string | null>(null);
+  const notifiedOverrunStepRef = useRef(0);
 
   const focusSeconds = (settings?.focus_minutes ?? 25) * 60;
   const shortBreakSeconds = (settings?.short_break_minutes ?? 5) * 60;
@@ -257,6 +319,35 @@ export function SessionView({ settings }: SessionViewProps) {
     },
     [focusSeconds, shortBreakSeconds],
   );
+
+  /** ブラウザ通知が利用可能な場合に通知権限をリクエストする。 */
+  const ensureNotificationPermission = useCallback(async (): Promise<
+    NotificationPermission | "unsupported"
+  > => {
+    if (typeof window === "undefined" || !("Notification" in window)) {
+      return "unsupported";
+    }
+    if (Notification.permission !== "default") {
+      return Notification.permission;
+    }
+    if (notificationPermissionRequestedRef.current) {
+      return Notification.permission;
+    }
+    notificationPermissionRequestedRef.current = true;
+    return Notification.requestPermission();
+  }, []);
+
+  /** 通知権限が許可済みの場合のみブラウザ通知を表示する。 */
+  const pushNotification = useCallback((title: string, body: string) => {
+    if (typeof window === "undefined" || !("Notification" in window)) {
+      return;
+    }
+    if (Notification.permission !== "granted") {
+      return;
+    }
+    new Notification(title, { body });
+    notificationSoundPlayerRef.current.play();
+  }, []);
 
   const refreshFromServer = useCallback(async () => {
     const [current, sessions] = await Promise.all([
@@ -317,13 +408,45 @@ export function SessionView({ settings }: SessionViewProps) {
     }
 
     const id = window.setInterval(() => {
-      setTimer((prev) => ({ ...prev, remainingSec: Math.max(0, prev.remainingSec - 1) }));
+      setTimer((prev) => ({ ...prev, remainingSec: prev.remainingSec - 1 }));
     }, 1000);
 
     return () => {
       window.clearInterval(id);
     };
   }, [timer.status]);
+
+  useEffect(() => {
+    notifiedZeroSessionIdRef.current = null;
+    notifiedOverrunStepRef.current = 0;
+  }, [timer.sessionId]);
+
+  useEffect(() => {
+    if (timer.status !== "running" || !timer.sessionId) {
+      return;
+    }
+
+    if (timer.remainingSec <= 0 && notifiedZeroSessionIdRef.current !== timer.sessionId) {
+      notifiedZeroSessionIdRef.current = timer.sessionId;
+      const phaseLabel = timer.phase === "focus" ? "作業" : "休憩";
+      pushNotification(
+        "ポモドーロ時間に到達しました",
+        `${phaseLabel}セッションが 00:00 になりました。`,
+      );
+    }
+
+    const overrunSec = Math.max(0, -timer.remainingSec);
+    const nextOverrunStep = Math.floor(overrunSec / (15 * 60));
+    if (nextOverrunStep <= 0 || nextOverrunStep <= notifiedOverrunStepRef.current) {
+      return;
+    }
+    notifiedOverrunStepRef.current = nextOverrunStep;
+    const overrunMinutes = nextOverrunStep * 15;
+    pushNotification(
+      "ポモドーロ超過時間のお知らせ",
+      `計画時間を ${overrunMinutes} 分超過しています。`,
+    );
+  }, [pushNotification, timer.phase, timer.remainingSec, timer.sessionId, timer.status]);
 
   const addTag = useCallback(() => {
     const nextTags = parseTags(tagInput).filter((tag) => !timer.tags.includes(tag));
@@ -362,6 +485,8 @@ export function SessionView({ settings }: SessionViewProps) {
     if (actionPending) {
       return;
     }
+    await ensureNotificationPermission();
+    await notificationSoundPlayerRef.current.prepare();
     setActionPending(true);
     setError("");
     try {
@@ -386,7 +511,7 @@ export function SessionView({ settings }: SessionViewProps) {
     } finally {
       setActionPending(false);
     }
-  }, [actionPending, refreshFromServer, timer]);
+  }, [actionPending, ensureNotificationPermission, refreshFromServer, timer]);
 
   const pause = useCallback(async () => {
     if (!timer.sessionId) {
@@ -499,21 +624,6 @@ export function SessionView({ settings }: SessionViewProps) {
     const sourcePhase = timer.phase;
     void finishAndTransition(sourcePhase, true);
   }, [finishAndTransition, timer.phase]);
-
-  useEffect(() => {
-    if (timer.status !== "running" || timer.remainingSec > 0 || !timer.sessionId) {
-      return;
-    }
-    if (transitioningRef.current) {
-      return;
-    }
-
-    transitioningRef.current = true;
-    const sourcePhase = timer.phase;
-    void finishAndTransition(sourcePhase, true).finally(() => {
-      transitioningRef.current = false;
-    });
-  }, [finishAndTransition, timer.phase, timer.remainingSec, timer.sessionId, timer.status]);
 
   const ringRatio = useMemo(() => {
     const total = timer.phase === "focus" ? focusSeconds : shortBreakSeconds;
