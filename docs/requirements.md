@@ -55,13 +55,13 @@
   - 受け入れ条件: localStorage 永続化 + 同期待ちキュー + 再送制御を抽象化した共通モジュールが frontend で利用できる
   - 受け入れ条件: メモ機能は共通モジュールを利用して実装され、機能固有ロジック（payload/merge/表示）と分離される
   - 受け入れ条件: 将来のポモドーロ等でも再利用できる API 形状（エンティティ種別依存の型パラメータ）になっている
-  - 対応タスク: BL-030
+  - 対応タスク: BL-033
   - 証跡: `apps/frontend/src/offlineSync/createQueue.ts`, `apps/frontend/src/memoOfflineSync.ts`, `apps/frontend/src/App.tsx`, `docs/backlog.md`
 - [x] RQ-OPS-013: 同期待ちキューの保存構造を正規化し、重複データを最小化する
   - 受け入れ条件: pending キューは `payload` と最小メタ情報のみを保持し、表示用 `preview` は復元時に再生成できる
   - 受け入れ条件: 既存の旧形式キュー（preview含む）を読んでも動作を維持できる
   - 受け入れ条件: memo 作成・再送・置換フローの機能差分がない
-  - 対応タスク: BL-031
+  - 対応タスク: BL-034
   - 証跡: `apps/frontend/src/memoOfflineSync.ts`, `apps/frontend/src/offlineSync/createQueue.ts`, `apps/frontend/src/App.tsx`, `apps/frontend/src/memoOfflineSync.test.ts`, `docs/offline-sync-flow.md`
 
 ## B. MVP機能要件
@@ -80,6 +80,14 @@
 - [ ] RQ-POM-004: ポモドーロ集計（日/週/月）が見られる
   - 受け入れ条件: APIとUIで期間別集計を表示できる
   - 証跡: 未記入
+- [x] RQ-POM-005: ポモドーロの時間到達通知をブラウザ通知で受け取れる
+  - 受け入れ条件: セッションが計画時間に到達（`00:00`）した時点でブラウザ通知が表示される
+  - 受け入れ条件: 計画時間超過後は15分ごとにブラウザ通知が表示される
+  - 受け入れ条件: 計画時間超過後はタイマー表示が `00:00` 固定ではなく、超過経過時間（`00:01`, `10:00`, `15:00` ...）を表示する
+  - 受け入れ条件: 各通知タイミングで通知音が再生される
+  - 受け入れ条件: 通知音実装は将来的に音声ファイル再生方式へ差し替えやすい構造である
+  - 対応タスク: BL-031
+  - 証跡: `apps/frontend/src/SessionView.tsx`, `docs/backlog.md`, `pnpm --filter mylife-frontend build`
 - [x] RQ-MEM-001: メモログCRUD APIがある
   - 受け入れ条件: Markdown本文、日付、タグ、関連セッションを保存できる
   - 対応タスク: BL-006
@@ -104,12 +112,24 @@
   - 受け入れ条件: メモ文字サイズを設定でき、デフォルト値は現行より大きい
   - 対応タスク: BL-017
   - 証跡: `apps/frontend/src/App.tsx`, `apps/frontend/src/styles.css`, `docs/backlog.md`
-- [x] RQ-MEM-008: メモログの初回表示と保存でローカルキャッシュを使った体感速度改善を行う
+- [ ] RQ-MEM-008: メモ作成UIの保存導線をモバイル操作向けに最適化する
+  - 受け入れ条件: iPhone幅でメモ作成フォームの Save ボタンが横長（フォーム幅に追従）で表示される
+  - 受け入れ条件: メモ作成フォームから `Ctrl + Enter to save` の文言が表示されない
+  - 対応タスク: BL-024
+  - 証跡: 未記入
+- [x] RQ-MEM-009: メモ一覧の件数表示を表示件数のみで簡潔に示す
+  - 受け入れ条件: メモ一覧上部のステータス文言が「x件を表示」形式で表示される
+  - 受け入れ条件: 総件数を併記しない
+  - 受け入れ条件: メモ一覧 API は `limit` 指定で件数を制限して取得できる
+  - 受け入れ条件: `limit` の境界値（1, 100, 0, 101）に対する API 応答がテストで担保される
+  - 対応タスク: BL-030
+  - 証跡: `apps/frontend/src/App.tsx`, `apps/backend/app/main.py`, `apps/backend/app/memo_logs.py`, `apps/backend/tests/test_memo_logs_api.py`, `docs/backlog.md`
+- [x] RQ-MEM-010: メモログの初回表示と保存でローカルキャッシュを使った体感速度改善を行う
   - 受け入れ条件: 初回表示時に `localStorage` のキャッシュ済みメモを先に描画し、その後に API 同期で更新できる
   - 受け入れ条件: 新規メモ作成時に UI へ即時反映し、Supabase 登録完了後にサーバー確定データへ置換できる
   - 受け入れ条件: API 失敗時でも一時保存データ（同期待ち）を保持し、再同期を試行できる
-  - 対応タスク: BL-029
-  - 証跡: `apps/frontend/src/App.tsx`, `apps/frontend/src/styles.css`, `docs/backlog.md`
+  - 対応タスク: BL-032, BL-033, BL-034
+  - 証跡: `apps/frontend/src/App.tsx`, `apps/frontend/src/memoOfflineSync.ts`, `apps/frontend/src/offlineSync/createQueue.ts`, `docs/offline-sync-flow.md`
 - [x] RQ-MEM-005: メモ保存の体感遅延を許容範囲に抑える
   - 受け入れ条件: 初回保存時のボトルネックを特定し、不要な待ち時間を削減できる
   - 対応タスク: BL-012
@@ -161,17 +181,18 @@
   - 証跡: 未記入
 - [ ] RQ-QLT-004: モバイル幅で主要画面が崩れない
   - 受け入れ条件: iPhone幅で主要画面が操作可能
-  - 対応タスク: BL-010, BL-023
+  - 対応タスク: BL-010, BL-023, BL-024
   - 証跡: 未記入
-- [ ] RQ-QLT-005: ダークモードをOS連動 + 手動上書きで切り替えできる
+- [x] RQ-QLT-005: ダークモードをOS連動 + 手動上書きで切り替えできる
   - 受け入れ条件: 初期表示は `prefers-color-scheme` を反映し、ユーザー操作で Light/Dark を切り替えできる
   - 受け入れ条件: 手動選択したテーマは永続化され、再訪時に同じテーマで表示される
-  - 対応タスク: BL-028
-  - 証跡: 未記入
+  - 受け入れ条件: テーマ切替実装は配色トークンが整理され、テーマ状態管理ロジックがUI本体から分離されている
+  - 対応タスク: BL-028, BL-029
+  - 証跡: `apps/frontend/src/App.tsx`, `apps/frontend/src/styles.css`, `apps/frontend/src/useTheme.ts`, `docs/backlog.md`
 - [x] RQ-QLT-006: オフライン同期キューのフロントエンドテストを整備する
   - 受け入れ条件: キュー追加、同期成功、同期失敗継続、再起動後復元、重複防止の主要ケースを自動テストで検証できる
   - 受け入れ条件: テスト実行コマンドが frontend package scripts から実行できる
-  - 対応タスク: BL-030
+  - 対応タスク: BL-033, BL-034
   - 証跡: `apps/frontend/src/offlineSync/createQueue.test.ts`, `apps/frontend/src/memoOfflineSync.test.ts`, `apps/frontend/package.json`, `pnpm test`
 - [x] RQ-DOC-001: Docstring とコードコメントの記述言語ルールが定義されている
   - 受け入れ条件: `AGENTS.md` にルールが明記され、実装コードの Docstring/コメントがルールに準拠している

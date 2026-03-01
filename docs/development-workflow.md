@@ -1,6 +1,6 @@
 # 仕様駆動開発ワークフロー
 
-最終更新: 2026-02-27
+最終更新: 2026-03-01
 
 ## 目的
 - ドキュメントを常に最新に保つ
@@ -42,12 +42,14 @@ git worktree add ../mylife-BL-003 -b codex/BL-003-pomodoro-settings-api
 - 変更内容をコミットする（要件ID/タスクIDを含める）。
 - `main` にマージする。
 - `docs/backlog.md` を更新（`In Progress` -> `Done`）。
+- `Done` へ移す際は、`In Progress` に記載した受け入れ条件を `Done` 側にも転記する。
 - `docs/requirements.md` の該当要件を `[x]` にする。
 - 残タスクと新タスクを `Ready` に追加する。
 
 ## 完了時チェックリスト（PR/マージ前）
 - [ ] 要件IDとタスクIDが明記されている
 - [ ] 受け入れ条件を満たす証跡がある
+- [ ] `Done` 側に受け入れ条件が転記されている
 - [ ] `docs/requirements.md` の状態が更新済み
 - [ ] `docs/backlog.md` の状態が更新済み
 - [ ] 追加で発生した新タスクが `Ready` に登録済み

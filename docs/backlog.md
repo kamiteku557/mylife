@@ -9,8 +9,9 @@
 1. 新機能/修正は、先に `docs/requirements.md` とこの `docs/backlog.md` を更新する。
 2. 実装着手時にタスクを `Ready` から `In Progress` に移動する。
 3. 完了時は受け入れ条件を確認し、`Done` に移動する。
-4. `Done` に移したら、対応する要件IDを `docs/requirements.md` で `[x]` にする。
-5. 最後に `main` へマージし、残タスクと新タスクをこのファイルへ反映する。
+4. `Done` へ移す際は、`In Progress` に書いた受け入れ条件を `Done` 側にも残す（証跡だけにしない）。
+5. `Done` に移したら、対応する要件IDを `docs/requirements.md` で `[x]` にする。
+6. 最後に `main` へマージし、残タスクと新タスクをこのファイルへ反映する。
 
 ## Ready
 - [ ] BL-002 (RQ-OPS-004): Supabase Auth によるAPI保護を実装する
@@ -50,25 +51,47 @@
   - 影響範囲: docs/frontend/backend
 
 ## In Progress
-- [ ] BL-028 (RQ-QLT-005): ダークモード切替（OS連動 + 手動上書き）を実装する
-  - 背景: 夜間利用時の視認性と疲労軽減のため、テーマを環境に追従しつつ任意で固定したい
-  - 受け入れ条件: 初期テーマは `prefers-color-scheme` に従い、ヘッダー操作で Light/Dark を即時切替できる
-  - 受け入れ条件: 手動選択テーマはローカル保存され、再訪時に復元される
-  - 影響範囲: frontend/docs
 - [ ] BL-014 (RQ-MEM-006): メモログUIをデザインモック準拠に更新する
   - 背景: メモ機能は実装済みだが、画面体験がデザインモックと乖離している
   - 受け入れ条件: 作成フォーム、タグ入力、時系列一覧、編集/削除操作をモック同等の画面機能で提供する
   - 受け入れ条件: 一覧カードでは編集/削除アイコンを日付の右隣に横並び配置し、縦方向の占有を削減する
   - 追加観点: 余白・配色・タイポグラフィ・アイコン操作をモックスクリーンショットと同等に調整する
   - 影響範囲: frontend/docs
+- [ ] BL-024 (RQ-MEM-008, RQ-QLT-004): モバイルでメモ保存ボタンを横長化し保存補助文言を削除する
+  - 背景: スマホ利用時に Save ボタンを押しやすくし、不要なキーボードショートカット案内を取り除いて入力体験を簡潔にしたい
+  - 受け入れ条件: iPhone幅でメモ作成フォームの Save ボタンが横長（フォーム幅に追従）で表示される
+  - 受け入れ条件: メモ作成フォームから `Ctrl + Enter to save` の文言が表示されない
+  - 影響範囲: frontend/docs
 
 ## Done
-- [x] BL-031 (RQ-OPS-013): pending キュー保存構造の正規化と互換維持リファクタを実装する
+- [x] BL-034 (RQ-OPS-013): pending キュー保存構造の正規化と互換維持リファクタを実装する
   - 証跡: `apps/frontend/src/memoOfflineSync.ts`, `apps/frontend/src/offlineSync/createQueue.ts`, `apps/frontend/src/App.tsx`, `apps/frontend/src/memoOfflineSync.test.ts`, `docs/offline-sync-flow.md`
-- [x] BL-030 (RQ-OPS-012, RQ-QLT-006): オフライン同期キューの共通化と網羅テストを実装する
+- [x] BL-033 (RQ-OPS-012, RQ-QLT-006): オフライン同期キューの共通化と網羅テストを実装する
   - 証跡: `apps/frontend/src/offlineSync/createQueue.ts`, `apps/frontend/src/memoOfflineSync.ts`, `apps/frontend/src/App.tsx`, `apps/frontend/src/offlineSync/createQueue.test.ts`, `apps/frontend/src/memoOfflineSync.test.ts`, `apps/frontend/package.json`
-- [x] BL-029 (RQ-MEM-008): メモログのローカルキャッシュ + 同期待ちキューを実装する
+- [x] BL-032 (RQ-MEM-010): メモログのローカルキャッシュ + 同期待ちキューを実装する
   - 証跡: `apps/frontend/src/App.tsx`, `apps/frontend/src/styles.css`, `docs/requirements.md`
+- [x] BL-030 (RQ-MEM-009): メモ一覧の件数表示文言を簡潔化する
+  - 受け入れ条件: メモ一覧のステータス文言が「x件を表示」に変更される
+  - 受け入れ条件: メモ一覧 API が `limit` 指定で必要件数のみ取得する
+  - 受け入れ条件: 既存の表示件数制御（設定画面の表示数）と連動して取得件数が変わる
+  - 受け入れ条件: `limit` の境界値（最小値/最大値/範囲外）を API テストで検証する
+  - 証跡: `apps/frontend/src/App.tsx`, `apps/backend/app/main.py`, `apps/backend/app/memo_logs.py`, `apps/backend/tests/test_memo_logs_api.py`, `docs/requirements.md`
+- [x] BL-031 (RQ-POM-005): ポモドーロのブラウザ通知（00:00到達 + 超過15分ごと）を実装する
+  - 受け入れ条件: セッションが `00:00` に到達したタイミングでブラウザ通知が表示される
+  - 受け入れ条件: 超過時間中は15分ごとにブラウザ通知が表示される
+  - 受け入れ条件: 超過時間中は時計表示が超過経過時間（`00:01`, `10:00`, `15:00` ...）として進む
+  - 受け入れ条件: 各通知タイミングで通知音が再生される
+  - 受け入れ条件: 通知音ロジックが疎結合で、音声ファイル再生実装へ差し替えやすい
+  - 証跡: `apps/frontend/src/SessionView.tsx`, `docs/requirements.md`, `pnpm --filter mylife-frontend build`, `Playwright manual check (timer overrun display)`
+- [x] BL-029 (RQ-QLT-005): ダークモード実装のトークン整理とテーマロジック分離を行う
+  - 受け入れ条件: CSSの直値色指定をテーマトークンへ統一し、重複トークンを削減できる
+  - 受け入れ条件: テーマ状態管理を `App.tsx` から `useTheme` へ切り出し、UIロジックとの責務分離ができる
+  - 受け入れ条件: 既存のテーマ切替挙動（OS連動 + 手動上書き + 永続化）を維持できる
+  - 証跡: `apps/frontend/src/App.tsx`, `apps/frontend/src/styles.css`, `apps/frontend/src/useTheme.ts`, `docs/backlog.md`, `docs/requirements.md`
+- [x] BL-028 (RQ-QLT-005): ダークモード切替（OS連動 + 手動上書き）を実装する
+  - 受け入れ条件: 初期テーマは `prefers-color-scheme` に従い、ヘッダー操作で Light/Dark を即時切替できる
+  - 受け入れ条件: 手動選択テーマはローカル保存され、再訪時に復元される
+  - 証跡: `apps/frontend/src/App.tsx`, `apps/frontend/src/styles.css`, `docs/backlog.md`, `docs/requirements.md`
 - [x] BL-023 (RQ-QLT-004): スマホ表示でヘッダーが見えない不具合を修正する
   - 証跡: `apps/frontend/src/styles.css`, `docs/backlog.md`, `docs/requirements.md`
 - [x] BL-019 (RQ-POM-003): セッション遷移と編集中UXの不具合を修正する
@@ -113,3 +136,8 @@
   - 背景: <なぜ必要か>
   - 受け入れ条件: <完了の定義>
   - 影響範囲: <backend/frontend/db/docs>
+
+## Done記録テンプレート
+- [x] BL-XXX (RQ-...): <タスク名>
+  - 受け入れ条件: <In Progressで定義した条件を転記>
+  - 証跡: <ファイル/URL/ログ>
