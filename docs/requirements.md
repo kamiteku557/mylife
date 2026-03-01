@@ -180,8 +180,8 @@
 - [x] RQ-QLT-002: Frontend に網羅的な単体/結合テストがある
   - 受け入れ条件: 主要UIロジック（設定値丸め込み・タグ正規化・Markdown描画・テーマ切替）を単体テストで検証できる
   - 受け入れ条件: 主要画面導線（メモ作成/編集/削除、設定更新）を結合テストで検証できる
-  - 対応タスク: BL-009（全体）, BL-035（網羅化）
-  - 証跡: `apps/frontend/src/App.utils.test.ts`, `apps/frontend/src/useTheme.test.tsx`, `apps/frontend/src/App.integration.test.tsx`, `pnpm test`
+  - 対応タスク: BL-009（全体）, BL-035（網羅化）, BL-037（ビルド互換性修正）
+  - 証跡: `apps/frontend/src/App.utils.test.ts`, `apps/frontend/src/useTheme.test.tsx`, `apps/frontend/src/App.integration.test.tsx`, `pnpm test`, `pnpm --filter mylife-frontend build`
 - [x] RQ-QLT-003: 主要導線を検証するE2Eテストがある
   - 受け入れ条件: ユーザー操作ベースでメモ主要導線（表示/作成/編集開始）をE2Eテストで検証できる
   - 受け入れ条件: ユーザー操作ベースでセッション主要導線（開始/一時停止/再開/完了）をE2Eテストで検証できる
@@ -208,8 +208,8 @@
   - 受け入れ条件: 完了前チェックでテスト追加有無を確認できる
   - 受け入れ条件: pre-commit 実行時に Backend/Frontend の全テストが自動実行される
   - 受け入れ条件: `main` マージ前に E2E テスト（`pnpm test:e2e`）を実行するルールが明記される
-  - 対応タスク: BL-035, BL-036
-  - 証跡: `docs/development-workflow.md`, `.pre-commit-config.yaml`, `pnpm precommit:run`, `pnpm test:e2e`
+  - 対応タスク: BL-035, BL-036, BL-038（frontend typecheck hook 追加）
+  - 証跡: `docs/development-workflow.md`, `.pre-commit-config.yaml`, `pnpm precommit:run`, `cd apps/backend && uv run pre-commit run frontend-typecheck --all-files`, `pnpm test:e2e`
 - [x] RQ-DOC-001: Docstring とコードコメントの記述言語ルールが定義されている
   - 受け入れ条件: `AGENTS.md` にルールが明記され、実装コードの Docstring/コメントがルールに準拠している
   - 対応タスク: BL-013

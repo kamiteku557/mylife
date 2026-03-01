@@ -70,7 +70,7 @@ pnpm precommit:install
 - [ ] 変更した仕様に対応する単体/結合/E2Eテストが追加・更新されている（不要な場合は理由が記録されている）
 - [ ] 追加・更新したテスト実行コマンドと結果を確認している
 - [ ] worktree で `pnpm install` / `cd apps/backend && uv sync` / `pnpm precommit:install` を実施済み
-- [ ] pre-commit 実行で Backend/Frontend テストが通過している
+- [ ] pre-commit 実行で Backend/Frontend テストと Frontend typecheck が通過している
 - [ ] `main` マージ直前に `pnpm test:e2e` が成功している
 
 ## コミットメッセージ例

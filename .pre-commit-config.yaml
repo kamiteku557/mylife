@@ -34,6 +34,13 @@ repos:
         pass_filenames: false
         always_run: true
 
+      - id: frontend-typecheck
+        name: frontend typecheck
+        entry: pnpm --filter mylife-frontend typecheck
+        language: system
+        pass_filenames: false
+        always_run: true
+
       - id: frontend-vitest
         name: frontend vitest
         entry: pnpm --filter mylife-frontend test

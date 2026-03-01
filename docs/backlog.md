@@ -64,6 +64,16 @@
   - 影響範囲: frontend/docs
 
 ## Done
+- [x] BL-038 (RQ-QLT-007): pre-commit に frontend typecheck を追加する
+  - 受け入れ条件: `.pre-commit-config.yaml` に `pnpm --filter mylife-frontend typecheck` を実行する hook が追加されている
+  - 受け入れ条件: 追加した hook を `pre-commit run` で実行すると成功する
+  - 受け入れ条件: 既存の frontend/backend テスト hook の挙動を壊さない
+  - 証跡: `.pre-commit-config.yaml`, `docs/development-workflow.md`, `docs/requirements.md`, `cd apps/backend && uv run pre-commit run frontend-typecheck --all-files`, `cd apps/backend && uv run pre-commit run frontend-vitest --all-files`, `cd apps/backend && uv run pre-commit run backend-pytest --all-files`
+- [x] BL-037 (RQ-QLT-002): Frontend build の TypeScript 互換性エラーを修正する
+  - 受け入れ条件: `pnpm --filter mylife-frontend build` が成功する
+  - 受け入れ条件: `apps/frontend/src/App.integration.test.tsx` の末尾要素参照が `lib` 設定に依存しない実装である
+  - 受け入れ条件: 末尾要素を参照する意図を自動テストで維持できる
+  - 証跡: `apps/frontend/src/App.integration.test.tsx`, `docs/backlog.md`, `docs/requirements.md`, `pnpm --filter mylife-frontend test -- src/App.integration.test.tsx`, `pnpm --filter mylife-frontend build`, `pnpm install --frozen-lockfile && pnpm --filter mylife-frontend build`
 - [x] BL-036 (RQ-OPS-011, RQ-QLT-007): worktree前提運用とマージ前E2E必須ルールを明文化する
   - 受け入れ条件: 開発フローに worktree を基本運用として明記されている
   - 受け入れ条件: 各 worktree で `pnpm install` と `cd apps/backend && uv sync` を実行する手順が明記されている
