@@ -93,6 +93,10 @@ pnpm precommit:run
 ## Environment variables
 - Backend env template: `apps/backend/.env.example`
 - Frontend env template: `apps/frontend/.env.example`
+- Push notification requires:
+  - Backend: `WEB_PUSH_VAPID_PUBLIC_KEY`, `WEB_PUSH_VAPID_PRIVATE_KEY`, `WEB_PUSH_SUBJECT`, `PUSH_DISPATCH_TOKEN`
+  - Frontend: `VITE_WEB_PUSH_VAPID_PUBLIC_KEY`
+  - GitHub Actions secrets: `PUSH_DISPATCH_URL`, `PUSH_DISPATCH_TOKEN`
 - Setup guide (consolidated): `docs/environment-setup.md`
 - Minimal deploy guide: `docs/deploy-minimal.md`
 - Deployment runbook: `docs/deployment-runbook.md`

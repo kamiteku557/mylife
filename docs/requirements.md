@@ -66,6 +66,12 @@
   - 受け入れ条件: memo 作成・再送・置換フローの機能差分がない
   - 対応タスク: BL-034
   - 証跡: `apps/frontend/src/memoOfflineSync.ts`, `apps/frontend/src/offlineSync/createQueue.ts`, `apps/frontend/src/App.tsx`, `apps/frontend/src/memoOfflineSync.test.ts`, `docs/offline-sync-flow.md`
+- [ ] RQ-OPS-014: 無料運用で背景Push通知を定期実行できる
+  - 受け入れ条件: GitHub Actions の `schedule` を使い、5分間隔で背景Push dispatch を実行できる
+  - 受け入れ条件: dispatch は秘密トークンで保護され、公開エンドポイントとして悪用されない
+  - 受け入れ条件: 無料枠前提の運用制約（遅延許容、実行時間監視、secret設定）が docs に記載される
+  - 対応タスク: BL-038
+  - 証跡: 未記入
 
 ## B. MVP機能要件
 - [x] RQ-POM-001: ポモドーロ設定（取得/更新）ができる
@@ -91,6 +97,18 @@
   - 受け入れ条件: 通知音実装は将来的に音声ファイル再生方式へ差し替えやすい構造である
   - 対応タスク: BL-031
   - 証跡: `apps/frontend/src/SessionView.tsx`, `docs/backlog.md`, `pnpm --filter mylife-frontend build`
+- [ ] RQ-POM-006: iOS PWA 復帰時にタイマー経過を正しく追従できる
+  - 受け入れ条件: iOS で別アプリへ切り替え後に復帰した際、表示タイマーが経過時間を反映して補正される
+  - 受け入れ条件: 00:00 到達後の超過表示（負値側）も復帰時に継続して正しく表示される
+  - 受け入れ条件: 実装は `setInterval` の1秒減算だけに依存せず、経過実時間ベースで補正できる
+  - 対応タスク: BL-037
+  - 証跡: 未記入
+- [ ] RQ-POM-007: iOS PWA で背景中のセッション通知を受け取れる
+  - 受け入れ条件: iOS 16.4+ のホーム画面追加アプリで push 購読できる
+  - 受け入れ条件: セッション 00:00 到達通知と 15分ごとの超過通知を背景中にも受信できる（最大5分遅延を許容）
+  - 受け入れ条件: 通知の取りこぼし復帰時は未送信分を連投せず、最新到達分のみ通知する
+  - 対応タスク: BL-038
+  - 証跡: 未記入
 - [x] RQ-MEM-001: メモログCRUD APIがある
   - 受け入れ条件: Markdown本文、日付、タグ、関連セッションを保存できる
   - 対応タスク: BL-006

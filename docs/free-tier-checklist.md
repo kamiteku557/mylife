@@ -1,6 +1,6 @@
 # 無料枠チェックリスト（mylife）
 
-最終更新: 2026-02-25
+最終更新: 2026-03-01
 
 ## 1. 構成確認
 - [ ] Frontend: Cloudflare Pages Free（または Vercel Hobby）
@@ -29,6 +29,9 @@
 - [ ] 週1回、Markdownエクスポートをローカル保管
 - [ ] 重い定期バッチを導入していない（集計はオンデマンド）
 - [ ] 無料枠を超える機能追加時は事前に見積もる
+- [ ] Push dispatch は GitHub Actions の 5分 schedule で運用し、通知遅延（最大5分）を許容している
+- [ ] GitHub Actions の実行時間（minutes）が無料枠内に収まるよう監視している
+- [ ] Render / Frontend / GitHub Actions の `PUSH_DISPATCH_TOKEN` が一致している
 
 ## 6. リリース前確認
 - [ ] ログインできる
