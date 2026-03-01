@@ -1,10 +1,12 @@
 """mylife バックエンドの FastAPI エントリポイントと HTTP ハンドラー。"""
 
-from fastapi import Depends, FastAPI, HTTPException
+from fastapi import Depends, FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import get_settings
 from app.memo_logs import (
+    MEMO_LOG_LIST_LIMIT_DEFAULT,
+    MEMO_LOG_LIST_LIMIT_MAX,
     MemoLogCreate,
     MemoLogNotFoundError,
     MemoLogOut,
@@ -83,11 +85,18 @@ def supabase_db_health(
 
 
 @app.get("/api/v1/memo-logs", response_model=list[MemoLogOut])
-def memo_logs_list(service: MemoLogService = memo_log_service_dep) -> list[MemoLogOut]:
+def memo_logs_list(
+    limit: int = Query(
+        default=MEMO_LOG_LIST_LIMIT_DEFAULT,
+        ge=1,
+        le=MEMO_LOG_LIST_LIMIT_MAX,
+    ),
+    service: MemoLogService = memo_log_service_dep,
+) -> list[MemoLogOut]:
     """現在のユーザースコープでメモログ一覧を返す。"""
 
     try:
-        return service.list()
+        return service.list(limit=limit)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception as exc:

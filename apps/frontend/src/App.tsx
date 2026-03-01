@@ -283,7 +283,10 @@ export function App() {
     setLoading(true);
     setError("");
     try {
-      const list = await fetchJson<MemoLog[]>("/api/v1/memo-logs");
+      const query = new URLSearchParams({
+        limit: String(settings.memoDisplayCount),
+      });
+      const list = await fetchJson<MemoLog[]>(`/api/v1/memo-logs?${query.toString()}`);
       list.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
       setMemoLogs(list);
     } catch (eventualError) {
@@ -291,7 +294,7 @@ export function App() {
     } finally {
       setLoading(false);
     }
-  }, [hasApiConfigError]);
+  }, [hasApiConfigError, settings.memoDisplayCount]);
 
   useEffect(() => {
     void refreshMemos();
@@ -678,9 +681,7 @@ export function App() {
               </div>
             ) : null}
 
-            <p className="status-text">
-              直近 {visibleMemos.length} / {renderedMemos.length} 件を表示中
-            </p>
+            <p className="status-text">{visibleMemos.length}件を表示</p>
 
             <section aria-label="Memo log" className="timeline">
               {visibleMemos.map((memo) => {

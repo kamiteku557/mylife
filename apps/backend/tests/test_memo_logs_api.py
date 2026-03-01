@@ -13,9 +13,10 @@ client = TestClient(app)
 class FakeMemoLogService:
     """テストケースごとにハンドラー挙動を制御する小さなテストダブル。"""
 
-    def list(self) -> list[dict]:
+    def list(self, limit: int = 100) -> list[dict]:
         """一覧レスポンスを返す。"""
 
+        _ = limit
         return [_sample_memo()]
 
     def get(self, _memo_id: str) -> dict:
@@ -74,6 +75,25 @@ def test_list_memo_logs():
     body = response.json()
     assert len(body) == 1
     assert body[0]["title"] == "memo title"
+
+
+def test_list_memo_logs_passes_limit_query():
+    """GET /memo-logs は query の limit をサービス層へ伝播する。"""
+
+    class CaptureLimitService(FakeMemoLogService):
+        received_limit: int | None = None
+
+        def list(self, limit: int = 100) -> list[dict]:
+            self.received_limit = limit
+            return super().list(limit=limit)
+
+    service = CaptureLimitService()
+    app.dependency_overrides[get_memo_log_service] = lambda: service
+
+    response = client.get("/api/v1/memo-logs?limit=7")
+
+    assert response.status_code == 200
+    assert service.received_limit == 7
 
 
 def test_get_memo_log_not_found():
