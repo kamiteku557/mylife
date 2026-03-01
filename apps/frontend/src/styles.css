@@ -733,12 +733,44 @@ kbd {
 
 @media (max-width: 680px) {
   .app-header-inner {
-    gap: 12px;
-    min-height: 62px;
+    min-height: 56px;
+    gap: 8px;
+    flex-wrap: nowrap;
+    align-items: center;
+    padding: 6px 12px;
+  }
+
+  .brand-wrap {
+    flex-shrink: 0;
+    min-width: 0;
+    gap: 6px;
+  }
+
+  .brand-icon {
+    display: none;
+  }
+
+  .brand-text {
+    font-size: 1.5rem;
+    line-height: 1.1;
   }
 
   .menu-tabs {
-    display: none;
+    display: flex;
+    width: auto;
+    flex: 1;
+    overflow-x: auto;
+    scrollbar-width: thin;
+    padding-bottom: 0;
+    margin-right: 0;
+    justify-content: flex-start;
+    min-width: 0;
+  }
+
+  .menu-tab {
+    flex: 0 0 auto;
+    font-size: 1.2rem;
+    padding: 6px 10px;
   }
 
   .content {
