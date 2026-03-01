@@ -16,6 +16,11 @@ class Settings(BaseSettings):
     supabase_service_role_key: str = ""
     supabase_jwt_secret: str = ""
 
+    web_push_vapid_public_key: str = ""
+    web_push_vapid_private_key: str = ""
+    web_push_subject: str = ""
+    push_dispatch_token: str = ""
+
 
 @lru_cache
 def get_settings() -> Settings:

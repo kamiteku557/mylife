@@ -72,6 +72,17 @@ def test_remaining_seconds_never_becomes_negative() -> None:
     assert pomodoro._remaining_seconds(row=row, now=now) == 0
 
 
+def test_compute_planned_end_at_uses_remaining_seconds() -> None:
+    """予定終了時刻は再開時刻と残り秒数から算出する。"""
+
+    started_at = datetime(2026, 3, 1, 10, 0, tzinfo=UTC)
+
+    assert pomodoro._compute_planned_end_at(started_at, 1500) == datetime(
+        2026, 3, 1, 10, 25, tzinfo=UTC
+    )
+    assert pomodoro._compute_planned_end_at(started_at, -10) == started_at
+
+
 def test_run_with_disconnect_retry_retries_once_on_disconnected_error(monkeypatch) -> None:
     """切断エラーのみ 1 回再試行する。"""
 

@@ -71,7 +71,8 @@ function createFetchMock(initialMemos: MemoLogRecord[]) {
     }
 
     if (url.pathname.startsWith("/api/v1/memo-logs/") && method === "PUT") {
-      const memoId = url.pathname.split("/").at(-1) ?? "";
+      const segments = url.pathname.split("/");
+      const memoId = segments[segments.length - 1] ?? "";
       const payload = JSON.parse(String(init?.body ?? "{}")) as {
         title: string;
         body_md: string;
@@ -98,7 +99,8 @@ function createFetchMock(initialMemos: MemoLogRecord[]) {
     }
 
     if (url.pathname.startsWith("/api/v1/memo-logs/") && method === "DELETE") {
-      const memoId = url.pathname.split("/").at(-1) ?? "";
+      const segments = url.pathname.split("/");
+      const memoId = segments[segments.length - 1] ?? "";
       const index = memos.findIndex((memo) => memo.id === memoId);
       if (index >= 0) {
         memos.splice(index, 1);

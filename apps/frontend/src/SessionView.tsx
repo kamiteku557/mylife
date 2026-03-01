@@ -1,4 +1,6 @@
 import { type KeyboardEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { ensurePushSubscription } from "./pushNotifications";
+import { elapsedWholeSeconds } from "./SessionViewTimer";
 
 type SessionPhase = "focus" | "break";
 type TimerStatus = "ready" | "running" | "paused";
@@ -309,6 +311,7 @@ export function SessionView({ settings }: SessionViewProps) {
   );
   const notifiedZeroSessionIdRef = useRef<string | null>(null);
   const notifiedOverrunStepRef = useRef(0);
+  const lastTickEpochMsRef = useRef<number | null>(null);
 
   const focusSeconds = (settings?.focus_minutes ?? 25) * 60;
   const shortBreakSeconds = (settings?.short_break_minutes ?? 5) * 60;
@@ -371,6 +374,28 @@ export function SessionView({ settings }: SessionViewProps) {
     }
   }, [resetToReady]);
 
+  /** 実行中タイマーを実経過時間で補正する。 */
+  const syncTimerByElapsed = useCallback(() => {
+    const nowEpochMs = Date.now();
+    setTimer((prev) => {
+      if (prev.status !== "running") {
+        lastTickEpochMsRef.current = null;
+        return prev;
+      }
+      const lastEpochMs = lastTickEpochMsRef.current;
+      if (lastEpochMs === null) {
+        lastTickEpochMsRef.current = nowEpochMs;
+        return prev;
+      }
+      const elapsedSec = elapsedWholeSeconds(lastEpochMs, nowEpochMs);
+      if (elapsedSec <= 0) {
+        return prev;
+      }
+      lastTickEpochMsRef.current = lastEpochMs + elapsedSec * 1000;
+      return { ...prev, remainingSec: prev.remainingSec - elapsedSec };
+    });
+  }, []);
+
   const persistSessionMeta = useCallback(
     async (nextTitle: string, nextTags: string[]) => {
       if (!timer.sessionId || timer.phase !== "focus" || timer.status === "ready") {
@@ -412,17 +437,39 @@ export function SessionView({ settings }: SessionViewProps) {
 
   useEffect(() => {
     if (timer.status !== "running") {
+      lastTickEpochMsRef.current = null;
       return;
     }
 
+    lastTickEpochMsRef.current = Date.now();
     const id = window.setInterval(() => {
-      setTimer((prev) => ({ ...prev, remainingSec: prev.remainingSec - 1 }));
+      syncTimerByElapsed();
     }, 1000);
 
     return () => {
       window.clearInterval(id);
     };
-  }, [timer.status]);
+  }, [syncTimerByElapsed, timer.sessionId, timer.status]);
+
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        return;
+      }
+      syncTimerByElapsed();
+    };
+    const handleFocus = () => {
+      syncTimerByElapsed();
+    };
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("focus", handleFocus);
+    window.addEventListener("pageshow", handleFocus);
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("focus", handleFocus);
+      window.removeEventListener("pageshow", handleFocus);
+    };
+  }, [syncTimerByElapsed]);
 
   useEffect(() => {
     notifiedZeroSessionIdRef.current = null;
@@ -493,8 +540,16 @@ export function SessionView({ settings }: SessionViewProps) {
     if (actionPending) {
       return;
     }
-    await ensureNotificationPermission();
+    const permission = await ensureNotificationPermission();
     await notificationSoundPlayerRef.current.prepare();
+    if (permission === "granted") {
+      try {
+        await ensurePushSubscription(API_BASE_URL);
+      } catch (eventualError) {
+        // Push 購読に失敗してもタイマー本体は継続できるよう処理を分離する。
+        console.warn("failed to ensure push subscription", eventualError);
+      }
+    }
     setActionPending(true);
     setError("");
     try {

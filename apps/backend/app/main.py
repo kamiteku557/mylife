@@ -1,6 +1,6 @@
 """mylife バックエンドの FastAPI エントリポイントと HTTP ハンドラー。"""
 
-from fastapi import Depends, FastAPI, HTTPException, Query
+from fastapi import Depends, FastAPI, Header, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import get_settings
@@ -27,6 +27,13 @@ from app.pomodoro import (
     SummaryGroupBy,
     get_pomodoro_service,
 )
+from app.push_notifications import (
+    PushDispatchResult,
+    PushNotificationService,
+    PushSubscriptionDelete,
+    PushSubscriptionUpsert,
+    get_push_notification_service,
+)
 from app.supabase_health import SupabaseHealthService, get_supabase_health_service
 
 settings = get_settings()
@@ -34,6 +41,7 @@ app = FastAPI(title=settings.app_name)
 memo_log_service_dep = Depends(get_memo_log_service)
 supabase_health_service_dep = Depends(get_supabase_health_service)
 pomodoro_service_dep = Depends(get_pomodoro_service)
+push_notification_service_dep = Depends(get_push_notification_service)
 
 app.add_middleware(
     CORSMiddleware,
@@ -359,3 +367,61 @@ def pomodoro_cancel(
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception as exc:
         raise HTTPException(status_code=502, detail=f"Failed to cancel pomodoro: {exc}") from exc
+
+
+@app.post("/api/v1/push/subscriptions", status_code=204)
+def push_subscription_register(
+    payload: PushSubscriptionUpsert,
+    service: PushNotificationService = push_notification_service_dep,
+) -> None:
+    """Web Push subscription を登録または更新する。"""
+
+    try:
+        service.register_subscription(payload)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(
+            status_code=502,
+            detail=f"Failed to register push subscription: {exc}",
+        ) from exc
+
+
+@app.delete("/api/v1/push/subscriptions", status_code=204)
+def push_subscription_unregister(
+    payload: PushSubscriptionDelete,
+    service: PushNotificationService = push_notification_service_dep,
+) -> None:
+    """Web Push subscription を無効化する。"""
+
+    try:
+        service.unregister_subscription(payload)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(
+            status_code=502, detail=f"Failed to unregister push subscription: {exc}"
+        ) from exc
+
+
+@app.post("/api/v1/ops/push-dispatch", response_model=PushDispatchResult)
+def push_dispatch(
+    x_dispatch_token: str | None = Header(default=None),
+    service: PushNotificationService = push_notification_service_dep,
+) -> PushDispatchResult:
+    """背景Push通知の dispatch を実行する内部運用 API。"""
+
+    if not settings.push_dispatch_token:
+        raise HTTPException(status_code=503, detail="push dispatch token is not configured")
+    if x_dispatch_token != settings.push_dispatch_token:
+        raise HTTPException(status_code=401, detail="unauthorized dispatch token")
+
+    try:
+        return service.dispatch_due_notifications()
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(
+            status_code=502,
+            detail=f"Failed to dispatch push notifications: {exc}",
+        ) from exc

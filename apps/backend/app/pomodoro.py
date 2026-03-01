@@ -19,7 +19,7 @@ SummaryGroupBy = Literal["day", "week", "month"]
 T = TypeVar("T")
 SESSION_SELECT = (
     "id, user_id, title, session_type, planned_seconds, actual_seconds, "
-    "started_at, ended_at, status, cycle_index, created_at"
+    "started_at, ended_at, status, cycle_index, created_at, planned_end_at, last_notified_step"
 )
 SETTINGS_SELECT = (
     "user_id, focus_minutes, short_break_minutes, long_break_minutes, long_break_every, updated_at"
@@ -254,6 +254,13 @@ def _get_default_planned_seconds(session_type: SessionType) -> int:
     if session_type == "short_break":
         return settings.short_break_minutes * 60
     return settings.long_break_minutes * 60
+
+
+def _compute_planned_end_at(started_at: datetime, remaining_seconds: int) -> datetime:
+    """通知判定に使う予定終了時刻を返す。"""
+
+    safe_remaining = max(0, int(remaining_seconds))
+    return started_at + timedelta(seconds=safe_remaining)
 
 
 def _compute_elapsed_seconds(row: Mapping[str, Any], now: datetime) -> int:
@@ -496,6 +503,8 @@ def start_pomodoro_session(payload: PomodoroSessionStart) -> PomodoroSessionOut:
                 "planned_seconds": planned_seconds,
                 "actual_seconds": 0,
                 "started_at": now.isoformat(),
+                "planned_end_at": _compute_planned_end_at(now, planned_seconds).isoformat(),
+                "last_notified_step": -1,
                 "status": "running",
                 "cycle_index": payload.cycle_index,
             }
@@ -566,6 +575,7 @@ def pause_pomodoro_session(session_id: str) -> PomodoroSessionOut:
         .update(
             {
                 "actual_seconds": elapsed_seconds,
+                "planned_end_at": None,
                 "status": "paused",
             }
         )
@@ -593,6 +603,9 @@ def resume_pomodoro_session(session_id: str) -> PomodoroSessionOut:
         raise PomodoroSessionStateError("session is not paused")
 
     now = datetime.now(tz=UTC)
+    planned_seconds = int(row.get("planned_seconds") or 0)
+    actual_seconds = int(row.get("actual_seconds") or 0)
+    remaining_seconds = max(0, planned_seconds - actual_seconds)
 
     update_response = (
         client.table("pomodoro_sessions")
@@ -600,6 +613,7 @@ def resume_pomodoro_session(session_id: str) -> PomodoroSessionOut:
             {
                 # 累積実績は actual_seconds で保持しているため、再開時刻は現在時刻へ更新する。
                 "started_at": now.isoformat(),
+                "planned_end_at": _compute_planned_end_at(now, remaining_seconds).isoformat(),
                 "status": "running",
             }
         )
@@ -651,6 +665,7 @@ def _close_pomodoro_session(
             {
                 "actual_seconds": elapsed_seconds,
                 "ended_at": now.isoformat(),
+                "planned_end_at": None,
                 "status": target_status,
             }
         )
