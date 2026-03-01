@@ -23,6 +23,13 @@ import {
   type MemoCreatePayload,
   type MemoLog,
 } from "./memoOfflineSync";
+import {
+  clampInt,
+  formatRelativeTime,
+  inferTitleFromBody,
+  parseTagText,
+  renderMarkdown,
+} from "./appUtils";
 import { SessionView } from "./SessionView";
 import { useTheme } from "./useTheme";
 
@@ -57,11 +64,6 @@ const MAX_MEMO_DISPLAY_COUNT = 100;
 const MIN_MEMO_FONT_SIZE_PX = 14;
 const MAX_MEMO_FONT_SIZE_PX = 32;
 const MEMO_FONT_SIZE_CSS_VAR = "--memo-font-size" as const;
-
-/** 設定値を最小/最大の範囲に丸める。 */
-function clampInt(value: number, minimum: number, maximum: number): number {
-  return Math.min(maximum, Math.max(minimum, Math.round(value)));
-}
 
 /** 設定の初期値を返す。 */
 function getDefaultSettings(): AppSettings {
@@ -108,98 +110,6 @@ function saveSettings(settings: AppSettings): void {
   window.localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(settings));
 }
 
-/** カンマ区切りテキストを重複なしタグ配列へ変換する。 */
-function parseTagText(tagText: string): string[] {
-  const unique = new Set<string>();
-  return tagText
-    .split(",")
-    .map((value) => value.trim())
-    .filter((value) => {
-      if (!value || unique.has(value)) {
-        return false;
-      }
-      unique.add(value);
-      return true;
-    });
-}
-
-/** 本文の先頭有効行を、保存用タイトルとして切り出す。 */
-function inferTitleFromBody(body: string): string {
-  const line = body
-    .split("\n")
-    .map((value) => value.trim())
-    .find((value) => value.length > 0);
-  if (!line) {
-    return "";
-  }
-  return line
-    .replace(/^#{1,6}\s*/, "")
-    .replace(/^[-*]\s*/, "")
-    .slice(0, 80);
-}
-
-/** XSS回避のためにHTML特殊文字をエスケープする。 */
-function escapeHtml(raw: string): string {
-  return raw
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
-}
-
-/** 一行分のMarkdown装飾（リンク・強調・コード）をHTML化する。 */
-function renderInlineMarkdown(line: string): string {
-  const escaped = escapeHtml(line);
-  return escaped
-    .replace(
-      /\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g,
-      '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>',
-    )
-    .replace(/`([^`]+)`/g, "<code>$1</code>")
-    .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
-    .replace(/\*([^*]+)\*/g, "<em>$1</em>");
-}
-
-/** 最低限のMarkdownをモック相当の表示に変換する。 */
-function renderMarkdown(markdown: string): string {
-  const trimmed = markdown.trim();
-  if (!trimmed) {
-    return "";
-  }
-
-  const blocks = trimmed.split(/\n\s*\n/);
-  return blocks
-    .map((block) => {
-      const lines = block.split("\n");
-      const first = lines[0] ?? "";
-
-      if (/^###\s+/.test(first)) {
-        return `<h3>${renderInlineMarkdown(first.replace(/^###\s+/, ""))}</h3>`;
-      }
-      if (/^##\s+/.test(first)) {
-        return `<h2>${renderInlineMarkdown(first.replace(/^##\s+/, ""))}</h2>`;
-      }
-      if (/^#\s+/.test(first)) {
-        return `<h1>${renderInlineMarkdown(first.replace(/^#\s+/, ""))}</h1>`;
-      }
-      if (lines.every((line) => line.startsWith("- "))) {
-        const items = lines
-          .map((line) => `<li>${renderInlineMarkdown(line.replace(/^-\s+/, ""))}</li>`)
-          .join("");
-        return `<ul>${items}</ul>`;
-      }
-      if (lines.every((line) => line.startsWith("> "))) {
-        const body = lines
-          .map((line) => renderInlineMarkdown(line.replace(/^>\s+/, "")))
-          .join("<br />");
-        return `<blockquote>${body}</blockquote>`;
-      }
-      return `<p>${lines.map((line) => renderInlineMarkdown(line)).join("<br />")}</p>`;
-    })
-    .join("");
-}
-
 /** メモ表示用の絶対時刻を生成する。 */
 function formatAbsoluteDate(iso: string): string {
   return new Intl.DateTimeFormat("ja-JP", {
@@ -210,28 +120,6 @@ function formatAbsoluteDate(iso: string): string {
     minute: "2-digit",
     weekday: "short",
   }).format(new Date(iso));
-}
-
-/** メモ表示用の相対時刻を生成する。 */
-function formatRelativeTime(iso: string): string {
-  const diffMs = Date.now() - new Date(iso).getTime();
-  const minutes = Math.floor(diffMs / 60000);
-  const hours = Math.floor(diffMs / 3600000);
-  const days = Math.floor(diffMs / 86400000);
-
-  if (minutes < 1) {
-    return "just now";
-  }
-  if (minutes < 60) {
-    return `${minutes}m ago`;
-  }
-  if (hours < 24) {
-    return `${hours}h ago`;
-  }
-  if (days < 7) {
-    return `${days}d ago`;
-  }
-  return "";
 }
 
 /** API JSON取得時に非2xxをErrorへ正規化する。 */
@@ -877,6 +765,7 @@ export function App() {
                                 onClick={() => startEditing(memo)}
                                 disabled={isPending}
                                 title={isPending ? "同期待ちは編集できません" : undefined}
+                                aria-label="Edit memo"
                               >
                                 <svg viewBox="0 0 24 24" aria-hidden="true">
                                   <path d="M3 17.25V21h3.75L19.8 7.95 16.05 4.2z" />
@@ -888,6 +777,7 @@ export function App() {
                                 className="row-icon-btn"
                                 onClick={() => void handleDelete(memo.id)}
                                 title={isPending ? "同期待ちはローカルから削除します" : undefined}
+                                aria-label="Delete memo"
                               >
                                 <svg viewBox="0 0 24 24" aria-hidden="true">
                                   <path d="M4 7h16" />

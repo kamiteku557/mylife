@@ -169,16 +169,22 @@
 - [x] RQ-GRD-003: 無料枠チェックリストがある
   - 受け入れ条件: デプロイ前確認項目が文書化されている
   - 証跡: `docs/free-tier-checklist.md`
-- [ ] RQ-QLT-001: Backend テストがある
-  - 受け入れ条件: 主要APIの正常/異常系をカバーする
-  - 対応タスク: BL-009（全体）、BL-006（メモAPI・SupabaseヘルスAPIのDIテスト化）
-  - 証跡: 未記入
-- [ ] RQ-QLT-002: Frontend テストがある
-  - 受け入れ条件: 主要UI操作を検証する
-  - 証跡: 未記入
-- [ ] RQ-QLT-003: 最低1本のE2Eがある
-  - 受け入れ条件: 主要導線が1本通る
-  - 証跡: 未記入
+- [x] RQ-QLT-001: Backend に網羅的な単体/結合テストがある
+  - 受け入れ条件: サービス層の主要ロジック（正規化・時刻計算・状態遷移・境界値）を単体テストで検証できる
+  - 受け入れ条件: 主要APIの正常/異常系を結合テストで検証できる
+  - 対応タスク: BL-009（全体）, BL-006（メモAPI・SupabaseヘルスAPIのDIテスト化）, BL-035（網羅化）
+  - 証跡: `apps/backend/tests/test_memo_logs_unit.py`, `apps/backend/tests/test_pomodoro_unit.py`, `apps/backend/tests/test_memo_logs_integration_api.py`, `apps/backend/tests/test_pomodoro_integration_api.py`, `pnpm test`
+- [x] RQ-QLT-002: Frontend に網羅的な単体/結合テストがある
+  - 受け入れ条件: 主要UIロジック（設定値丸め込み・タグ正規化・Markdown描画・テーマ切替）を単体テストで検証できる
+  - 受け入れ条件: 主要画面導線（メモ作成/編集/削除、設定更新）を結合テストで検証できる
+  - 対応タスク: BL-009（全体）, BL-035（網羅化）
+  - 証跡: `apps/frontend/src/App.utils.test.ts`, `apps/frontend/src/useTheme.test.tsx`, `apps/frontend/src/App.integration.test.tsx`, `pnpm test`
+- [x] RQ-QLT-003: 主要導線を検証するE2Eテストがある
+  - 受け入れ条件: ユーザー操作ベースでメモ主要導線（表示/作成/編集開始）をE2Eテストで検証できる
+  - 受け入れ条件: ユーザー操作ベースでセッション主要導線（開始/一時停止/再開/完了）をE2Eテストで検証できる
+  - 受け入れ条件: E2Eテストをローカルで再現可能な実行コマンドが整備される
+  - 対応タスク: BL-009（全体）, BL-035（網羅化）
+  - 証跡: `apps/frontend/e2e/memo-flow.spec.ts`, `apps/frontend/e2e/session-flow.spec.ts`, `playwright.config.ts`, `pnpm test:e2e`
 - [ ] RQ-QLT-004: モバイル幅で主要画面が崩れない
   - 受け入れ条件: iPhone幅で主要画面が操作可能
   - 対応タスク: BL-010, BL-023, BL-024
@@ -194,6 +200,12 @@
   - 受け入れ条件: テスト実行コマンドが frontend package scripts から実行できる
   - 対応タスク: BL-033, BL-034
   - 証跡: `apps/frontend/src/offlineSync/createQueue.test.ts`, `apps/frontend/src/memoOfflineSync.test.ts`, `apps/frontend/package.json`, `pnpm test`
+- [x] RQ-QLT-007: 実装タスクごとにテストを継続追加する開発ルールがある
+  - 受け入れ条件: 開発フローに「各BLで単体/結合/E2Eの追加・更新要否を判定し、必要分を同一タスク内で追加する」ルールが明記されている
+  - 受け入れ条件: 完了前チェックでテスト追加有無を確認できる
+  - 受け入れ条件: pre-commit 実行時に Backend/Frontend の全テストが自動実行される
+  - 対応タスク: BL-035
+  - 証跡: `docs/development-workflow.md`, `.pre-commit-config.yaml`, `pnpm precommit:run`
 - [x] RQ-DOC-001: Docstring とコードコメントの記述言語ルールが定義されている
   - 受け入れ条件: `AGENTS.md` にルールが明記され、実装コードの Docstring/コメントがルールに準拠している
   - 対応タスク: BL-013
