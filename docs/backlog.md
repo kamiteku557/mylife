@@ -51,6 +51,12 @@
   - 影響範囲: docs/frontend/backend
 
 ## In Progress
+- [ ] BL-041 (RQ-OPS-015): Push dispatch workflow の timeout 整合を修正する
+  - 背景: `dispatch` job の `timeout-minutes=1` が `curl --max-time=90` より短く、実行中に強制キャンセルされる
+  - 受け入れ条件: workflow job timeout が dispatch API 呼び出し timeout より長い
+  - 受け入れ条件: 1分超のコールドスタート時でも job timeout が先に発火しない
+  - 受け入れ条件: schedule 実行で `The job has exceeded the maximum execution time of 1m0s` が再発しない
+  - 影響範囲: ci/docs
 - [ ] BL-039 (RQ-POM-008): iOS PWA 復帰時のタイマー再同期をサーバー基準で強化する
   - 背景: 復帰時のローカル補正のみでは、iOS PWA のライフサイクル差異で表示時刻が追従しないケースが残る
   - 受け入れ条件: `visibilitychange` / `focus` / `pageshow` 復帰時に `/api/v1/pomodoro/current` を再取得して表示時刻を補正できる

@@ -76,8 +76,9 @@
   - 受け入れ条件: GitHub Actions の dispatch 呼び出しが Render コールドスタート時でもタイムアウト失敗しにくい
   - 受け入れ条件: dispatch 呼び出しは再試行を持ち、単発失敗で通知が恒常的に停止しない
   - 受け入れ条件: 単一 subscription の送信失敗で dispatch 全体が 502 失敗しない
+  - 受け入れ条件: workflow job timeout は dispatch HTTP 呼び出し timeout より短くならない
   - 受け入れ条件: 実行ログから dispatch 応答（件数）を確認できる
-  - 対応タスク: BL-040
+  - 対応タスク: BL-040, BL-041
   - 証跡: 未記入
 
 ## B. MVP機能要件
