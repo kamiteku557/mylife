@@ -38,11 +38,6 @@
   - 影響範囲: docs/frontend/backend
 
 ## In Progress
-- [ ] BL-023 (RQ-QLT-004): スマホ表示でヘッダーが見えない不具合を修正する
-  - 背景: モバイル幅でヘッダーナビゲーションが非表示になり、画面遷移操作が分かりづらい
-  - 受け入れ条件: iPhone幅でヘッダーは1段表示を維持し、`Memo`/`Session`/`Settings` タブで各画面へ遷移できる
-  - 受け入れ条件: モバイル幅ではブランドアイコンを非表示にし、ヘッダーの可視性を優先する
-  - 影響範囲: frontend/docs
 - [ ] BL-014 (RQ-MEM-006): メモログUIをデザインモック準拠に更新する
   - 背景: メモ機能は実装済みだが、画面体験がデザインモックと乖離している
   - 受け入れ条件: 作成フォーム、タグ入力、時系列一覧、編集/削除操作をモック同等の画面機能で提供する
@@ -50,6 +45,8 @@
   - 影響範囲: frontend/docs
 
 ## Done
+- [x] BL-023 (RQ-QLT-004): スマホ表示でヘッダーが見えない不具合を修正する
+  - 証跡: `apps/frontend/src/styles.css`, `docs/backlog.md`, `docs/requirements.md`
 - [x] BL-019 (RQ-POM-003): セッション遷移と編集中UXの不具合を修正する
   - 証跡: `apps/frontend/src/SessionView.tsx`, `apps/frontend/src/styles.css`, `apps/backend/app/pomodoro.py`, `apps/backend/app/main.py`, `apps/backend/tests/test_pomodoro_api.py`
 - [x] BL-004 (RQ-POM-002): ポモドーロセッション制御APIを実装する
