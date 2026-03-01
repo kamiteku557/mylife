@@ -35,3 +35,7 @@ apps/backend/.env
 
 # tmp
 develop_assets
+
+# Playwright
+playwright-report/
+test-results/

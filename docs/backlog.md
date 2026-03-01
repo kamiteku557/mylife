@@ -64,6 +64,13 @@
   - 影響範囲: frontend/docs
 
 ## Done
+- [x] BL-032 (RQ-QLT-001, RQ-QLT-002, RQ-QLT-003, RQ-QLT-006): 網羅的テストの追加と継続追加ルールを整備する
+  - 受け入れ条件: Backend の主要ロジックを対象に単体テスト（境界値・例外・状態遷移）を追加する
+  - 受け入れ条件: Frontend の主要導線を対象に結合テスト（メモ作成/編集/削除、設定変更）を追加する
+  - 受け入れ条件: 主要導線をユーザー操作で検証するE2Eテスト（Memo と Session を含む）を追加する
+  - 受け入れ条件: 開発フローに、各BLで単体/結合/E2Eの追加・更新要否を判定し随時追加するルールを明記する
+  - 受け入れ条件: pre-commit 実行時に Backend/Frontend の全テストが自動実行される
+  - 証跡: `apps/backend/tests/test_memo_logs_unit.py`, `apps/backend/tests/test_pomodoro_unit.py`, `apps/backend/tests/test_memo_logs_integration_api.py`, `apps/backend/tests/test_pomodoro_integration_api.py`, `apps/frontend/src/App.utils.test.ts`, `apps/frontend/src/useTheme.test.tsx`, `apps/frontend/src/App.integration.test.tsx`, `apps/frontend/e2e/memo-flow.spec.ts`, `apps/frontend/e2e/session-flow.spec.ts`, `playwright.config.ts`, `.pre-commit-config.yaml`, `docs/development-workflow.md`, `pnpm test`, `pnpm precommit:run`
 - [x] BL-030 (RQ-MEM-009): メモ一覧の件数表示文言を簡潔化する
   - 受け入れ条件: メモ一覧のステータス文言が「x件を表示」に変更される
   - 受け入れ条件: メモ一覧 API が `limit` 指定で必要件数のみ取得する

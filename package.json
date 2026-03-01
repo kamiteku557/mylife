@@ -11,6 +11,10 @@
     "dev:frontend": "pnpm --filter mylife-frontend dev",
     "build:frontend": "pnpm --filter mylife-frontend build",
     "preview:frontend": "pnpm --filter mylife-frontend preview",
+    "test:backend": "cd apps/backend && uv run pytest -q",
+    "test:frontend": "pnpm --filter mylife-frontend test",
+    "test:e2e": "playwright test",
+    "test": "pnpm test:backend && pnpm test:frontend && pnpm test:e2e",
     "lint:backend": "cd apps/backend && uv run ruff check .",
     "format:backend": "cd apps/backend && uv run ruff format .",
     "lint:frontend": "pnpm --filter mylife-frontend lint",
@@ -19,5 +23,8 @@
     "format": "pnpm format:backend && pnpm format:frontend",
     "precommit:install": "cd apps/backend && uv run pre-commit install",
     "precommit:run": "cd apps/backend && uv run pre-commit run --all-files"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.54.2"
   }
 }

@@ -26,3 +26,17 @@ repos:
         language: system
         files: ^apps/frontend/.*\.(js|jsx|ts|tsx|json|css|md|html|yml|yaml)$
         pass_filenames: false
+
+      - id: backend-pytest
+        name: backend pytest
+        entry: uv run --project apps/backend pytest -q
+        language: system
+        pass_filenames: false
+        always_run: true
+
+      - id: frontend-vitest
+        name: frontend vitest
+        entry: pnpm --filter mylife-frontend test
+        language: system
+        pass_filenames: false
+        always_run: true

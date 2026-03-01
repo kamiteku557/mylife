@@ -12,6 +12,7 @@
 2. すべての実装タスクは要件ID（`RQ-*`）に紐づける。
 3. 完了判定はコードではなく「受け入れ条件」で行う。
 4. `Done` の更新は、マージ後に必ず行う。
+5. 各BLで単体/結合/E2Eの追加・更新要否を判定し、必要なテストは同一タスク内で随時追加する。
 
 ## 1サイクルの流れ
 1. 要件更新
@@ -33,9 +34,12 @@ git worktree add ../mylife-BL-003 -b codex/BL-003-pomodoro-settings-api
 4. 実装
 - `In Progress` へ移動して実装する。
 - 仕様変更が出たら先にドキュメントを更新してからコードを直す。
+- TDD（Red -> Green -> Refactor）で進める。
+- 変更差分に対して単体/結合/E2Eのどこで担保するかを明記し、未追加のまま完了扱いにしない。
 
 5. 受け入れ確認
 - `lint/test/manual` で受け入れ条件を満たすことを確認する。
+- テストは `unit/integration/e2e` の実行結果を確認し、失敗時は原因を解消してから完了判定する。
 - 満たさない場合は `Done` にしない。
 
 6. 仕上げ
@@ -53,6 +57,9 @@ git worktree add ../mylife-BL-003 -b codex/BL-003-pomodoro-settings-api
 - [ ] `docs/requirements.md` の状態が更新済み
 - [ ] `docs/backlog.md` の状態が更新済み
 - [ ] 追加で発生した新タスクが `Ready` に登録済み
+- [ ] 変更した仕様に対応する単体/結合/E2Eテストが追加・更新されている（不要な場合は理由が記録されている）
+- [ ] 追加・更新したテスト実行コマンドと結果を確認している
+- [ ] pre-commit 実行で Backend/Frontend テストが通過している
 
 ## コミットメッセージ例
 - `feat(pomodoro): implement settings API (BL-003, RQ-POM-001)`
