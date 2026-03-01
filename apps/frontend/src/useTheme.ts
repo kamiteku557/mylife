@@ -6,12 +6,30 @@ export type ThemePreference = ThemeName | "system";
 const THEME_PREFERENCE_STORAGE_KEY = "mylife.theme-preference.v1";
 const THEME_DARK_MEDIA_QUERY = "(prefers-color-scheme: dark)";
 
+/** OSメディアクエリ結果をテーマ名へ変換する。 */
+function mapMatchToTheme(matches: boolean): ThemeName {
+  return matches ? "dark" : "light";
+}
+
 /** OS設定から現在のテーマを判定する。 */
 function getSystemTheme(): ThemeName {
   if (typeof window === "undefined") {
     return "light";
   }
-  return window.matchMedia(THEME_DARK_MEDIA_QUERY).matches ? "dark" : "light";
+  return mapMatchToTheme(window.matchMedia(THEME_DARK_MEDIA_QUERY).matches);
+}
+
+/** 選択状態（system含む）を実際に適用するテーマへ解決する。 */
+function resolveTheme(preference: ThemePreference): ThemeName {
+  if (preference === "system") {
+    return getSystemTheme();
+  }
+  return preference;
+}
+
+/** Light/Dark を相互に反転する。 */
+function invertTheme(theme: ThemeName): ThemeName {
+  return theme === "dark" ? "light" : "dark";
 }
 
 /** 保存済みテーマ設定を読み込み、無効値は system 扱いにする。 */
@@ -44,8 +62,7 @@ export function useTheme(): {
     loadThemePreference(),
   );
   const [theme, setTheme] = useState<ThemeName>(() => {
-    const preference = loadThemePreference();
-    return preference === "system" ? getSystemTheme() : preference;
+    return resolveTheme(loadThemePreference());
   });
 
   useEffect(() => {
@@ -57,10 +74,10 @@ export function useTheme(): {
       setTheme(themePreference);
       return;
     }
-    setTheme(getSystemTheme());
+    setTheme(resolveTheme(themePreference));
     const media = window.matchMedia(THEME_DARK_MEDIA_QUERY);
     const handleThemeChange = (event: MediaQueryListEvent) => {
-      setTheme(event.matches ? "dark" : "light");
+      setTheme(mapMatchToTheme(event.matches));
     };
     media.addEventListener("change", handleThemeChange);
     return () => media.removeEventListener("change", handleThemeChange);
@@ -72,8 +89,7 @@ export function useTheme(): {
 
   const toggleTheme = useCallback(() => {
     setThemePreference((previous) => {
-      const current = previous === "system" ? getSystemTheme() : previous;
-      return current === "dark" ? "light" : "dark";
+      return invertTheme(resolveTheme(previous));
     });
   }, []);
 
