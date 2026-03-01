@@ -36,7 +36,7 @@
   - 背景: デザイン確認や機能確認をデプロイ前にローカルで再現できる状態にしたい
   - 受け入れ条件: 必要な環境変数、起動順序、確認ポイント（frontend/backend/api）を docs に明記する
   - 影響範囲: docs/frontend/backend
-- [ ] BL-025 (RQ-OPS-011): worktree 利用時の開発環境セットアップ手順を標準化する
+- [ ] BL-027 (RQ-OPS-011): worktree 利用時の開発環境セットアップ手順を標準化する
   - 背景: worktree を継続利用する方針のため、依存未初期化（`eslint: command not found`）やポート競合を再発させない運用ルールを残したい
   - 詳細方針:
   - 新規 worktree 作成直後の初期化手順を定義する（frontend は `pnpm install`、backend は必要時のみ `uv sync`）
@@ -50,7 +50,7 @@
   - 影響範囲: docs/frontend/backend
 
 ## In Progress
-- [ ] BL-026 (RQ-QLT-005): ダークモード切替（OS連動 + 手動上書き）を実装する
+- [ ] BL-028 (RQ-QLT-005): ダークモード切替（OS連動 + 手動上書き）を実装する
   - 背景: 夜間利用時の視認性と疲労軽減のため、テーマを環境に追従しつつ任意で固定したい
   - 受け入れ条件: 初期テーマは `prefers-color-scheme` に従い、ヘッダー操作で Light/Dark を即時切替できる
   - 受け入れ条件: 手動選択テーマはローカル保存され、再訪時に復元される
