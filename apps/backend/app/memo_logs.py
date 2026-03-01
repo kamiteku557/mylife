@@ -17,6 +17,8 @@ from app.config import get_settings
 
 # RQ-OPS-004 の認証実装までの暫定対応として、メモ API は固定デモユーザーで動作する。
 DEMO_USER_ID = "00000000-0000-0000-0000-000000000001"
+MEMO_LOG_LIST_LIMIT_MAX = 100
+MEMO_LOG_LIST_LIMIT_DEFAULT = 100
 
 
 class MemoLogCreate(BaseModel):
@@ -62,10 +64,10 @@ class MemoLogNotFoundError(ValueError):
 class MemoLogService:
     """メモログユースケース向けに FastAPI DI へ公開するサービスオブジェクト。"""
 
-    def list(self) -> list[MemoLogOut]:
+    def list(self, limit: int = MEMO_LOG_LIST_LIMIT_DEFAULT) -> list[MemoLogOut]:
         """現在のユーザースコープでメモログ一覧を返す。"""
 
-        return list_memo_logs()
+        return list_memo_logs(limit=limit)
 
     def get(self, memo_id: str) -> MemoLogOut:
         """ID を指定してメモログを 1 件取得する。"""
@@ -215,11 +217,12 @@ def _sync_memo_tags(client: Client, user_id: str, memo_id: str, tags: list[str])
     return [row["name"] for row in tag_rows]
 
 
-def list_memo_logs() -> list[MemoLogOut]:
+def list_memo_logs(limit: int = MEMO_LOG_LIST_LIMIT_DEFAULT) -> list[MemoLogOut]:
     """現在のユーザースコープでメモログを日付降順で返す。"""
 
     client = _get_client()
     _ensure_demo_user_once()
+    safe_limit = max(1, min(limit, MEMO_LOG_LIST_LIMIT_MAX))
 
     response = (
         client.table("memo_logs")
@@ -227,6 +230,7 @@ def list_memo_logs() -> list[MemoLogOut]:
         .eq("user_id", DEMO_USER_ID)
         .order("log_date", desc=True)
         .order("created_at", desc=True)
+        .limit(safe_limit)
         .execute()
     )
 

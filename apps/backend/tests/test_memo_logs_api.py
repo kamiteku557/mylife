@@ -4,7 +4,7 @@ from datetime import UTC, date, datetime
 
 import pytest
 from app.main import app
-from app.memo_logs import MemoLogNotFoundError, get_memo_log_service
+from app.memo_logs import MEMO_LOG_LIST_LIMIT_MAX, MemoLogNotFoundError, get_memo_log_service
 from fastapi.testclient import TestClient
 
 client = TestClient(app)
@@ -13,9 +13,10 @@ client = TestClient(app)
 class FakeMemoLogService:
     """テストケースごとにハンドラー挙動を制御する小さなテストダブル。"""
 
-    def list(self) -> list[dict]:
+    def list(self, limit: int = 100) -> list[dict]:
         """一覧レスポンスを返す。"""
 
+        _ = limit
         return [_sample_memo()]
 
     def get(self, _memo_id: str) -> dict:
@@ -74,6 +75,56 @@ def test_list_memo_logs():
     body = response.json()
     assert len(body) == 1
     assert body[0]["title"] == "memo title"
+
+
+def test_list_memo_logs_passes_limit_query():
+    """GET /memo-logs は query の limit をサービス層へ伝播する。"""
+
+    class CaptureLimitService(FakeMemoLogService):
+        received_limit: int | None = None
+
+        def list(self, limit: int = 100) -> list[dict]:
+            self.received_limit = limit
+            return super().list(limit=limit)
+
+    service = CaptureLimitService()
+    app.dependency_overrides[get_memo_log_service] = lambda: service
+
+    response = client.get("/api/v1/memo-logs?limit=7")
+
+    assert response.status_code == 200
+    assert service.received_limit == 7
+
+
+@pytest.mark.parametrize("limit", [1, MEMO_LOG_LIST_LIMIT_MAX])
+def test_list_memo_logs_accepts_limit_boundaries(limit: int):
+    """GET /memo-logs は許容範囲端の limit を受け取りサービス層へ伝播する。"""
+
+    class CaptureLimitService(FakeMemoLogService):
+        received_limit: int | None = None
+
+        def list(self, limit: int = 100) -> list[dict]:
+            self.received_limit = limit
+            return super().list(limit=limit)
+
+    service = CaptureLimitService()
+    app.dependency_overrides[get_memo_log_service] = lambda: service
+
+    response = client.get(f"/api/v1/memo-logs?limit={limit}")
+
+    assert response.status_code == 200
+    assert service.received_limit == limit
+
+
+@pytest.mark.parametrize("limit", [0, MEMO_LOG_LIST_LIMIT_MAX + 1])
+def test_list_memo_logs_rejects_out_of_range_limit(limit: int):
+    """GET /memo-logs は範囲外 limit を HTTP 422 で拒否する。"""
+
+    app.dependency_overrides[get_memo_log_service] = FakeMemoLogService
+
+    response = client.get(f"/api/v1/memo-logs?limit={limit}")
+
+    assert response.status_code == 422
 
 
 def test_get_memo_log_not_found():
