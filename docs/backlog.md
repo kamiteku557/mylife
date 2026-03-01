@@ -40,14 +40,14 @@
 - [ ] BL-027 (RQ-OPS-011): worktree 利用時の開発環境セットアップ手順を標準化する
   - 背景: worktree を継続利用する方針のため、依存未初期化（`eslint: command not found`）やポート競合を再発させない運用ルールを残したい
   - 詳細方針:
-  - 新規 worktree 作成直後の初期化手順を定義する（frontend は `pnpm install`、backend は必要時のみ `uv sync`）
-  - backend を `uv sync` する条件を明文化する（`pyproject.toml` / `uv.lock` 変更時、backend 作業開始時など）
+  - 新規 worktree 作成直後の初期化手順を定義する（`pnpm install` と `cd apps/backend && uv sync` を各 worktree で実行）
+  - pre-commit hook 有効化手順（`pnpm precommit:install`）を明文化する
   - ポート割り当てルールを定義する（例: default 5173/8000 と別に検証用 5184/8100 を使い、`lsof` で競合確認する）
   - 作業開始時チェックリストを定義する（`pnpm --filter mylife-frontend exec eslint -v`、`lsof -iTCP:<port>`、env確認）
   - README か `docs/development-workflow.md` に「worktree利用時」節を追加し、コマンド例を記載する
   - 受け入れ条件: 新しい worktree で、手順どおりに実行すると frontend lint とローカル起動確認を再現できる
   - 受け入れ条件: 既存 worktree との同時起動でポート衝突を回避できる
-  - 受け入れ条件: 「いつ `uv sync` が必要か」を第三者が判断できる記述になっている
+  - 受け入れ条件: 各 worktree の初期化（依存 + hook）を第三者が再現できる記述になっている
   - 影響範囲: docs/frontend/backend
 
 ## In Progress
@@ -64,6 +64,12 @@
   - 影響範囲: frontend/docs
 
 ## Done
+- [x] BL-036 (RQ-OPS-011, RQ-QLT-007): worktree前提運用とマージ前E2E必須ルールを明文化する
+  - 受け入れ条件: 開発フローに worktree を基本運用として明記されている
+  - 受け入れ条件: 各 worktree で `pnpm install` と `cd apps/backend && uv sync` を実行する手順が明記されている
+  - 受け入れ条件: 各 worktree で hook 有効化（`pnpm precommit:install`）を行う手順が明記されている
+  - 受け入れ条件: `main` マージ直前に `pnpm test:e2e` を実行するルールが明記されている
+  - 証跡: `docs/requirements.md`, `docs/development-workflow.md`, `docs/backlog.md`
 - [x] BL-034 (RQ-OPS-013): pending キュー保存構造の正規化と互換維持リファクタを実装する
   - 証跡: `apps/frontend/src/memoOfflineSync.ts`, `apps/frontend/src/offlineSync/createQueue.ts`, `apps/frontend/src/App.tsx`, `apps/frontend/src/memoOfflineSync.test.ts`, `docs/offline-sync-flow.md`
 - [x] BL-033 (RQ-OPS-012, RQ-QLT-006): オフライン同期キューの共通化と網羅テストを実装する
