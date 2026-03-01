@@ -3,6 +3,12 @@ export interface KeyValueStorage {
   setItem(key: string, value: string): void;
 }
 
+/**
+ * 重要:
+ * このファイルの同期待ちキュー処理を修正した場合は、
+ * `docs/offline-sync-flow.md` を同一コミットで更新すること。
+ */
+
 export interface OfflineCreateQueueEntry<TPayload, TPreview> {
   client_id: string;
   payload: TPayload;
@@ -85,10 +91,12 @@ export async function consumeCreateQueue<TPayload, TPreview, TSynced>(params: {
   for (let index = 0; index < params.queue.length; index += 1) {
     const entry = params.queue[index];
     try {
+      // 送信順序を固定し、先に積まれた作業を先に確定させる。
       const synced = await params.createRemote(entry.payload);
       successes.push({ entry, synced });
     } catch (eventualError) {
       const error = eventualError instanceof Error ? eventualError : new Error("queue sync failed");
+      // 失敗エントリ以降は未送信として返す。再試行時の再現性を優先する。
       return {
         successes,
         remaining: params.queue.slice(index),

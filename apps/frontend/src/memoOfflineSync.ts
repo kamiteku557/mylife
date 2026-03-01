@@ -7,6 +7,12 @@ import {
   type OfflineCreateQueueEntry,
 } from "./offlineSync/createQueue";
 
+/**
+ * 重要:
+ * メモのオフライン同期フロー（enqueue/sync/replace）を変更した場合は、
+ * `docs/offline-sync-flow.md` を同一コミットで更新すること。
+ */
+
 export type MemoSyncStatus = "synced" | "pending";
 
 export interface MemoLog {
@@ -125,6 +131,8 @@ export function savePendingMemoQueue(
 
 /** メモキャッシュを保存する。 */
 export function saveMemoCache(storage: KeyValueStorage, memos: MemoLog[]): void {
+  // pendingをキャッシュへ混ぜると、次回起動時に「未確定データ」を確定表示してしまう。
+  // そのためキャッシュ対象は同期済みデータに限定する。
   const syncedOnly = memos
     .filter((memo) => memo.sync_status !== "pending")
     .map((memo) => ({ ...memo, sync_status: undefined }));
@@ -153,6 +161,8 @@ export function enqueueMemoCreate(
   preview: MemoLog;
   queue: PendingMemoQueueItem[];
 } {
+  // 同期待ちキューを必ず「既存 + 新規」で作り直して保存する。
+  // これにより、未送信分を失わず再起動後も再送できる。
   const queue = loadPendingMemoQueue(storage);
   const appended = appendCreateQueueEntry({
     queue,
@@ -184,6 +194,7 @@ export async function syncPendingMemoCreates(params: {
     queue,
     createRemote: params.createRemote,
   });
+  // 失敗位置以降は残キューとして保存し、次回同期へ引き継ぐ。
   savePendingMemoQueue(params.storage, consumed.remaining);
 
   return {
@@ -206,6 +217,7 @@ export function applyMemoSyncSuccesses(
   }
   const byPreviewId = new Map(successes.map((result) => [result.previewId, result.syncedMemo]));
   const syncedAdds = successes.map((result) => result.syncedMemo);
+  // 置換対象のプレビュー(local:xxx)だけ除外し、成功分を確定データとして再挿入する。
   const kept = current.filter((memo) => !byPreviewId.has(memo.id));
   return sortMemosByCreatedAtDesc([...syncedAdds, ...kept]);
 }

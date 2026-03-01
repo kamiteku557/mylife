@@ -23,6 +23,12 @@ import {
 } from "./memoOfflineSync";
 import { SessionView } from "./SessionView";
 
+/**
+ * 重要:
+ * `runInitialSync` / `refreshMemos` / `syncPendingMemos` の順序や責務を変更した場合は、
+ * `docs/offline-sync-flow.md` も同一コミットで更新すること。
+ */
+
 interface AppSettings {
   memoDisplayCount: number;
   memoFontSizePx: number;
@@ -340,6 +346,7 @@ export function App() {
     if (typeof window === "undefined") {
       return;
     }
+    // 画面状態のうち「同期済みメモのみ」をキャッシュ化し、次回起動の初速を上げる。
     saveMemoCache(window.localStorage, memoLogs);
   }, [memoLogs]);
 
@@ -348,6 +355,7 @@ export function App() {
       return;
     }
     // 起動直後の待ち時間を減らすため、先にローカルキャッシュを表示する。
+    // ここではネットワーク完了を待たず、表示可能なデータを即描画する。
     const cached = loadMemoCache(window.localStorage);
     const pendingQueue = loadPendingMemoQueue(window.localStorage);
     const pendingPreviews = pendingQueue.map((item) => ({
@@ -366,9 +374,11 @@ export function App() {
     if (hasApiConfigError || pendingSyncInFlightRef.current) {
       return;
     }
+    // 同時多重送信を防ぐ。二重送信は重複作成の原因になるため逐次1本に制限する。
     pendingSyncInFlightRef.current = true;
     setSyncingMemos(true);
     try {
+      // localStorageの同期待ちキューを順番にPOSTし、成功分は置換情報として受け取る。
       const synced = await syncPendingMemoCreates({
         storage: window.localStorage,
         createRemote: async (payload) =>
@@ -379,6 +389,7 @@ export function App() {
       });
       setPendingSyncCount(synced.pendingQueue.length);
       if (synced.successes.length > 0) {
+        // local:xxx の仮メモを、サーバー確定のメモIDへ差し替える。
         setMemoLogs((prev) => applyMemoSyncSuccesses(prev, synced.successes));
       }
       if (synced.error) {
@@ -402,6 +413,7 @@ export function App() {
     setSyncingMemos(true);
     setError("");
     try {
+      // 「裏で最新を取り直す」本体。サーバー最新一覧を取得する。
       const list = await fetchJson<MemoLog[]>("/api/v1/memo-logs");
       const synced = list.map((item) => markSyncedMemo(item));
       const pendingQueue = loadPendingMemoQueue(window.localStorage);
@@ -410,7 +422,9 @@ export function App() {
         sync_status: "pending" as const,
       }));
       setPendingSyncCount(pendingQueue.length);
+      // サーバー最新 + 同期待ちプレビューを合成し、整合を保ちながら表示する。
       setMemoLogs(mergeMemoList(synced, pendingPreviews));
+      // 次回の高速表示用に、サーバー確定データをキャッシュする。
       saveMemoCache(window.localStorage, synced);
     } catch (eventualError) {
       setError(eventualError instanceof Error ? eventualError.message : "failed to load memo logs");
@@ -422,6 +436,7 @@ export function App() {
 
   useEffect(() => {
     const runInitialSync = async () => {
+      // 初期表示は「先出しキャッシュ → サーバー再取得 → 同期待ち再送」の順で実行する。
       await refreshMemos();
       await syncPendingMemos();
     };
@@ -531,12 +546,14 @@ export function App() {
         // セッション紐づけUIは未提供のため、現時点はnull固定で送信する。
         related_session_id: null,
       };
+      // 1) localStorageの同期待ちキューへ積む 2) 画面へ即時反映、を先に行う。
       const queued = enqueueMemoCreate(window.localStorage, payload);
       setPendingSyncCount(queued.queue.length);
       setMemoLogs((prev) => mergeMemoList(prev, [queued.preview]));
       setComposerBody("");
       setComposerTags([]);
       setComposerTagInput("");
+      // 入力完了後に非同期送信を開始。失敗時はキューが残るので再試行できる。
       void syncPendingMemos();
     },
     [composerBody, composerTags, syncPendingMemos],
