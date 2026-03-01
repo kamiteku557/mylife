@@ -70,6 +70,13 @@
   - 受け入れ条件: 既存の表示件数制御（設定画面の表示数）と連動して取得件数が変わる
   - 受け入れ条件: `limit` の境界値（最小値/最大値/範囲外）を API テストで検証する
   - 証跡: `apps/frontend/src/App.tsx`, `apps/backend/app/main.py`, `apps/backend/app/memo_logs.py`, `apps/backend/tests/test_memo_logs_api.py`, `docs/requirements.md`
+- [x] BL-031 (RQ-POM-005): ポモドーロのブラウザ通知（00:00到達 + 超過15分ごと）を実装する
+  - 受け入れ条件: セッションが `00:00` に到達したタイミングでブラウザ通知が表示される
+  - 受け入れ条件: 超過時間中は15分ごとにブラウザ通知が表示される
+  - 受け入れ条件: 超過時間中は時計表示が超過経過時間（`00:01`, `10:00`, `15:00` ...）として進む
+  - 受け入れ条件: 各通知タイミングで通知音が再生される
+  - 受け入れ条件: 通知音ロジックが疎結合で、音声ファイル再生実装へ差し替えやすい
+  - 証跡: `apps/frontend/src/SessionView.tsx`, `docs/requirements.md`, `pnpm --filter mylife-frontend build`, `Playwright manual check (timer overrun display)`
 - [x] BL-029 (RQ-QLT-005): ダークモード実装のトークン整理とテーマロジック分離を行う
   - 受け入れ条件: CSSの直値色指定をテーマトークンへ統一し、重複トークンを削減できる
   - 受け入れ条件: テーマ状態管理を `App.tsx` から `useTheme` へ切り出し、UIロジックとの責務分離ができる
