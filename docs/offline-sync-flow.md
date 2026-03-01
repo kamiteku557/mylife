@@ -24,7 +24,7 @@ Last updated: 2026-03-01
 
 3. On Save click:
 - Build memo create payload.
-- Enqueue to `pendingQueue` and create local preview (`local:<client_id>`).
+- Enqueue to `pendingQueue` with minimal metadata (`meta.queued_at`) and create local preview (`local:<client_id>`).
 - Render preview immediately.
 
 4. Background sync:
@@ -35,6 +35,8 @@ Last updated: 2026-03-01
 ## Data stores
 - `mylife.memo-cache.v1`: synced memo cache for fast initial render.
 - `mylife.memo-pending-create.v1`: unsent create queue for retry.
+  - Current shape: `{ client_id, payload, meta: { queued_at } }`
+  - Legacy shape with `preview` is still accepted and normalized on load.
 
 ## Maintenance rule
 - If offline-sync logic changes in the source files above, update this document in the same commit.

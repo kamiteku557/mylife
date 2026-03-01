@@ -57,6 +57,12 @@
   - 受け入れ条件: 将来のポモドーロ等でも再利用できる API 形状（エンティティ種別依存の型パラメータ）になっている
   - 対応タスク: BL-030
   - 証跡: `apps/frontend/src/offlineSync/createQueue.ts`, `apps/frontend/src/memoOfflineSync.ts`, `apps/frontend/src/App.tsx`, `docs/backlog.md`
+- [x] RQ-OPS-013: 同期待ちキューの保存構造を正規化し、重複データを最小化する
+  - 受け入れ条件: pending キューは `payload` と最小メタ情報のみを保持し、表示用 `preview` は復元時に再生成できる
+  - 受け入れ条件: 既存の旧形式キュー（preview含む）を読んでも動作を維持できる
+  - 受け入れ条件: memo 作成・再送・置換フローの機能差分がない
+  - 対応タスク: BL-031
+  - 証跡: `apps/frontend/src/memoOfflineSync.ts`, `apps/frontend/src/offlineSync/createQueue.ts`, `apps/frontend/src/App.tsx`, `apps/frontend/src/memoOfflineSync.test.ts`, `docs/offline-sync-flow.md`
 
 ## B. MVP機能要件
 - [x] RQ-POM-001: ポモドーロ設定（取得/更新）ができる

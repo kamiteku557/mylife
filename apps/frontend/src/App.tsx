@@ -10,6 +10,8 @@ import {
 } from "react";
 import {
   applyMemoSyncSuccesses,
+  buildPendingPreviewFromQueue,
+  buildPendingPreviewId,
   enqueueMemoCreate,
   loadMemoCache,
   loadPendingMemoQueue,
@@ -358,10 +360,7 @@ export function App() {
     // ここではネットワーク完了を待たず、表示可能なデータを即描画する。
     const cached = loadMemoCache(window.localStorage);
     const pendingQueue = loadPendingMemoQueue(window.localStorage);
-    const pendingPreviews = pendingQueue.map((item) => ({
-      ...item.preview,
-      sync_status: "pending" as const,
-    }));
+    const pendingPreviews = pendingQueue.map((item) => buildPendingPreviewFromQueue(item));
     const merged = mergeMemoList(cached, pendingPreviews);
     if (merged.length > 0) {
       setMemoLogs(merged);
@@ -417,10 +416,7 @@ export function App() {
       const list = await fetchJson<MemoLog[]>("/api/v1/memo-logs");
       const synced = list.map((item) => markSyncedMemo(item));
       const pendingQueue = loadPendingMemoQueue(window.localStorage);
-      const pendingPreviews = pendingQueue.map((item) => ({
-        ...item.preview,
-        sync_status: "pending" as const,
-      }));
+      const pendingPreviews = pendingQueue.map((item) => buildPendingPreviewFromQueue(item));
       setPendingSyncCount(pendingQueue.length);
       // サーバー最新 + 同期待ちプレビューを合成し、整合を保ちながら表示する。
       setMemoLogs(mergeMemoList(synced, pendingPreviews));
@@ -610,7 +606,7 @@ export function App() {
       }
       if (target.sync_status === "pending") {
         const filteredQueue = loadPendingMemoQueue(window.localStorage).filter(
-          (item) => item.preview.id !== memoId,
+          (item) => buildPendingPreviewId(item.client_id) !== memoId,
         );
         savePendingMemoQueue(window.localStorage, filteredQueue);
         setPendingSyncCount(filteredQueue.length);

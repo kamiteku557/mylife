@@ -9,20 +9,20 @@ export interface KeyValueStorage {
  * `docs/offline-sync-flow.md` を同一コミットで更新すること。
  */
 
-export interface OfflineCreateQueueEntry<TPayload, TPreview> {
+export interface OfflineCreateQueueEntry<TPayload, TMeta = undefined> {
   client_id: string;
   payload: TPayload;
-  preview: TPreview;
+  meta?: TMeta;
 }
 
-export interface QueueConsumeSuccess<TPayload, TPreview, TSynced> {
-  entry: OfflineCreateQueueEntry<TPayload, TPreview>;
+export interface QueueConsumeSuccess<TPayload, TMeta, TSynced> {
+  entry: OfflineCreateQueueEntry<TPayload, TMeta>;
   synced: TSynced;
 }
 
-export interface QueueConsumeResult<TPayload, TPreview, TSynced> {
-  successes: QueueConsumeSuccess<TPayload, TPreview, TSynced>[];
-  remaining: OfflineCreateQueueEntry<TPayload, TPreview>[];
+export interface QueueConsumeResult<TPayload, TMeta, TSynced> {
+  successes: QueueConsumeSuccess<TPayload, TMeta, TSynced>[];
+  remaining: OfflineCreateQueueEntry<TPayload, TMeta>[];
   error: Error | null;
 }
 
@@ -58,20 +58,20 @@ export function generateClientId(now: () => number = Date.now): string {
 }
 
 /** 作成系キューへエントリを1件追加する。 */
-export function appendCreateQueueEntry<TPayload, TPreview>(params: {
-  queue: OfflineCreateQueueEntry<TPayload, TPreview>[];
+export function appendCreateQueueEntry<TPayload, TMeta = undefined>(params: {
+  queue: OfflineCreateQueueEntry<TPayload, TMeta>[];
   payload: TPayload;
   clientId?: string;
-  buildPreview: (payload: TPayload, clientId: string) => TPreview;
+  buildMeta?: (payload: TPayload, clientId: string) => TMeta;
 }): {
-  entry: OfflineCreateQueueEntry<TPayload, TPreview>;
-  queue: OfflineCreateQueueEntry<TPayload, TPreview>[];
+  entry: OfflineCreateQueueEntry<TPayload, TMeta>;
+  queue: OfflineCreateQueueEntry<TPayload, TMeta>[];
 } {
   const clientId = params.clientId ?? generateClientId();
   const entry = {
     client_id: clientId,
     payload: params.payload,
-    preview: params.buildPreview(params.payload, clientId),
+    meta: params.buildMeta ? params.buildMeta(params.payload, clientId) : undefined,
   };
   return {
     entry,
@@ -83,11 +83,11 @@ export function appendCreateQueueEntry<TPayload, TPreview>(params: {
  * 作成系キューを先頭から順に送信する。
  * 失敗時はその時点で停止し、失敗エントリ以降を remaining として返す。
  */
-export async function consumeCreateQueue<TPayload, TPreview, TSynced>(params: {
-  queue: OfflineCreateQueueEntry<TPayload, TPreview>[];
+export async function consumeCreateQueue<TPayload, TMeta, TSynced>(params: {
+  queue: OfflineCreateQueueEntry<TPayload, TMeta>[];
   createRemote: (payload: TPayload) => Promise<TSynced>;
-}): Promise<QueueConsumeResult<TPayload, TPreview, TSynced>> {
-  const successes: QueueConsumeSuccess<TPayload, TPreview, TSynced>[] = [];
+}): Promise<QueueConsumeResult<TPayload, TMeta, TSynced>> {
+  const successes: QueueConsumeSuccess<TPayload, TMeta, TSynced>[] = [];
   for (let index = 0; index < params.queue.length; index += 1) {
     const entry = params.queue[index];
     try {

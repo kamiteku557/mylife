@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   applyMemoSyncSuccesses,
+  buildPendingPreviewFromQueue,
   enqueueMemoCreate,
   loadMemoCache,
   loadPendingMemoQueue,
@@ -63,7 +64,63 @@ describe("memoOfflineSync", () => {
     expect(result.preview.id.startsWith("local:")).toBe(true);
     expect(result.preview.sync_status).toBe("pending");
     expect(result.queue).toHaveLength(1);
-    expect(loadPendingMemoQueue(storage)).toHaveLength(1);
+    const loadedQueue = loadPendingMemoQueue(storage);
+    expect(loadedQueue).toHaveLength(1);
+    expect(loadedQueue[0]?.meta?.queued_at).toBeTypeOf("string");
+  });
+
+  it("loadPendingMemoQueue: legacy queue(with preview) is normalized", () => {
+    const storage = new MemoryStorage();
+    storage.setItem(
+      "mylife.memo-pending-create.v1",
+      JSON.stringify([
+        {
+          client_id: "legacy-1",
+          payload: {
+            title: "t",
+            body_md: "b",
+            log_date: "2026-03-01",
+            related_session_id: null,
+            tags: [],
+          },
+          preview: {
+            id: "local:legacy-1",
+            user_id: "local-pending",
+            title: "t",
+            body_md: "b",
+            log_date: "2026-03-01",
+            related_session_id: null,
+            tags: [],
+            created_at: "2026-03-01T02:00:00.000Z",
+            updated_at: "2026-03-01T02:00:00.000Z",
+            sync_status: "pending",
+          },
+        },
+      ]),
+    );
+    const loaded = loadPendingMemoQueue(storage);
+    expect(loaded).toHaveLength(1);
+    expect(loaded[0]?.client_id).toBe("legacy-1");
+    expect(loaded[0]?.meta?.queued_at).toBe("2026-03-01T02:00:00.000Z");
+  });
+
+  it("buildPendingPreviewFromQueue: builds preview from payload and queued_at", () => {
+    const preview = buildPendingPreviewFromQueue({
+      client_id: "q1",
+      payload: {
+        title: "x",
+        body_md: "hello",
+        log_date: "2026-03-01",
+        related_session_id: null,
+        tags: ["t"],
+      },
+      meta: {
+        queued_at: "2026-03-01T03:00:00.000Z",
+      },
+    });
+    expect(preview.id).toBe("local:q1");
+    expect(preview.created_at).toBe("2026-03-01T03:00:00.000Z");
+    expect(preview.body_md).toBe("hello");
   });
 
   it("mergeMemoList: keeps pending preview and synced server memos", () => {

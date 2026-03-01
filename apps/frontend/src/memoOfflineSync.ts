@@ -1,6 +1,7 @@
 import {
   appendCreateQueueEntry,
   consumeCreateQueue,
+  generateClientId,
   loadStoredList,
   saveStoredList,
   type KeyValueStorage,
@@ -28,7 +29,7 @@ export interface MemoLog {
   sync_status?: MemoSyncStatus;
 }
 
-export interface MemoCreatePayload {
+export interface MemoDraftFields {
   title: string;
   body_md: string;
   log_date: string;
@@ -36,7 +37,18 @@ export interface MemoCreatePayload {
   tags: string[];
 }
 
-export type PendingMemoQueueItem = OfflineCreateQueueEntry<MemoCreatePayload, MemoLog>;
+export type MemoCreatePayload = MemoDraftFields;
+
+export interface PendingMemoMeta {
+  queued_at: string;
+}
+
+export interface PendingMemoQueueItem extends OfflineCreateQueueEntry<
+  MemoCreatePayload,
+  PendingMemoMeta
+> {
+  meta: PendingMemoMeta;
+}
 
 export interface MemoSyncSuccess {
   previewId: string;
@@ -52,6 +64,11 @@ export interface MemoSyncResult {
 export const MEMO_CACHE_STORAGE_KEY = "mylife.memo-cache.v1";
 export const MEMO_PENDING_QUEUE_STORAGE_KEY = "mylife.memo-pending-create.v1";
 
+/** クライアント側の一時メモIDを生成する。 */
+export function buildPendingPreviewId(clientId: string): string {
+  return `local:${clientId}`;
+}
+
 /** メモ配列を作成日時の降順へ揃える。 */
 export function sortMemosByCreatedAtDesc(memos: MemoLog[]): MemoLog[] {
   return [...memos].sort(
@@ -65,18 +82,18 @@ export function markSyncedMemo(memo: MemoLog): MemoLog {
 }
 
 /** ローカルプレビュー用の同期待ちメモを生成する。 */
-export function buildPendingPreview(payload: MemoCreatePayload, clientId: string): MemoLog {
-  const now = new Date().toISOString();
+export function buildPendingPreviewFromQueue(item: PendingMemoQueueItem): MemoLog {
+  const queuedAt = item.meta.queued_at;
   return {
-    id: `local:${clientId}`,
+    id: buildPendingPreviewId(item.client_id),
     user_id: "local-pending",
-    title: payload.title,
-    body_md: payload.body_md,
-    log_date: payload.log_date,
-    related_session_id: payload.related_session_id,
-    tags: [...payload.tags],
-    created_at: now,
-    updated_at: now,
+    title: item.payload.title,
+    body_md: item.payload.body_md,
+    log_date: item.payload.log_date,
+    related_session_id: item.payload.related_session_id,
+    tags: [...item.payload.tags],
+    created_at: queuedAt,
+    updated_at: queuedAt,
     sync_status: "pending",
   };
 }
@@ -105,8 +122,53 @@ export function isPendingMemoQueueItem(value: unknown): value is PendingMemoQueu
     typeof candidate.client_id === "string" &&
     !!candidate.payload &&
     typeof candidate.payload.body_md === "string" &&
-    isMemoLog(candidate.preview)
+    !!candidate.meta &&
+    typeof candidate.meta.queued_at === "string"
   );
+}
+
+/** Pendingエントリに必要なmetaを必ず補完して返す。 */
+function ensurePendingMeta(
+  item: OfflineCreateQueueEntry<MemoCreatePayload, PendingMemoMeta>,
+): PendingMemoQueueItem {
+  return {
+    ...item,
+    meta: item.meta ?? {
+      queued_at: new Date().toISOString(),
+    },
+  };
+}
+
+/** 旧形式(pendingにpreviewを持つ)から新形式へ正規化する。 */
+function normalizePendingMemoQueueItem(value: unknown): PendingMemoQueueItem | null {
+  if (!value || typeof value !== "object") {
+    return null;
+  }
+  if (isPendingMemoQueueItem(value)) {
+    return value;
+  }
+  const legacy = value as {
+    client_id?: unknown;
+    payload?: unknown;
+    preview?: { created_at?: unknown } | undefined;
+  };
+  if (
+    typeof legacy.client_id !== "string" ||
+    !legacy.payload ||
+    typeof (legacy.payload as MemoCreatePayload).body_md !== "string"
+  ) {
+    return null;
+  }
+  return {
+    client_id: legacy.client_id,
+    payload: legacy.payload as MemoCreatePayload,
+    meta: {
+      queued_at:
+        typeof legacy.preview?.created_at === "string"
+          ? legacy.preview.created_at
+          : new Date().toISOString(),
+    },
+  };
 }
 
 /** キャッシュ済みメモを読み込み、同期済み状態へ正規化する。 */
@@ -118,7 +180,13 @@ export function loadMemoCache(storage: KeyValueStorage): MemoLog[] {
 
 /** 同期待ちキューを読み込む。 */
 export function loadPendingMemoQueue(storage: KeyValueStorage): PendingMemoQueueItem[] {
-  return loadStoredList(storage, MEMO_PENDING_QUEUE_STORAGE_KEY, isPendingMemoQueueItem);
+  return loadStoredList(
+    storage,
+    MEMO_PENDING_QUEUE_STORAGE_KEY,
+    (_value): _value is unknown => true,
+  )
+    .map((value) => normalizePendingMemoQueueItem(value))
+    .filter((item): item is PendingMemoQueueItem => item !== null);
 }
 
 /** 同期待ちキューを保存する。 */
@@ -167,12 +235,17 @@ export function enqueueMemoCreate(
   const appended = appendCreateQueueEntry({
     queue,
     payload,
-    buildPreview: buildPendingPreview,
+    clientId: generateClientId(),
+    buildMeta: () => ({
+      queued_at: new Date().toISOString(),
+    }),
   });
-  savePendingMemoQueue(storage, appended.queue);
+  const nextQueue = appended.queue.map((item) => ensurePendingMeta(item));
+  savePendingMemoQueue(storage, nextQueue);
+  const queuedEntry = ensurePendingMeta(appended.entry);
   return {
-    preview: appended.entry.preview,
-    queue: appended.queue,
+    preview: buildPendingPreviewFromQueue(queuedEntry),
+    queue: nextQueue,
   };
 }
 
@@ -194,15 +267,16 @@ export async function syncPendingMemoCreates(params: {
     queue,
     createRemote: params.createRemote,
   });
+  const remainingQueue = consumed.remaining.map((item) => ensurePendingMeta(item));
   // 失敗位置以降は残キューとして保存し、次回同期へ引き継ぐ。
-  savePendingMemoQueue(params.storage, consumed.remaining);
+  savePendingMemoQueue(params.storage, remainingQueue);
 
   return {
     successes: consumed.successes.map((result) => ({
-      previewId: result.entry.preview.id,
+      previewId: buildPendingPreviewId(result.entry.client_id),
       syncedMemo: markSyncedMemo(result.synced),
     })),
-    pendingQueue: consumed.remaining,
+    pendingQueue: remainingQueue,
     error: consumed.error,
   };
 }

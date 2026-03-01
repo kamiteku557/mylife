@@ -57,17 +57,17 @@ describe("offlineSync/createQueue", () => {
       queue: [],
       payload: { text: "hello" },
       clientId: "fixed",
-      buildPreview: (payload, clientId) => ({ id: `local:${clientId}`, text: payload.text }),
+      buildMeta: (payload, clientId) => ({ local_id: `local:${clientId}`, text: payload.text }),
     });
     expect(result.entry.client_id).toBe("fixed");
     expect(result.queue).toHaveLength(1);
-    expect(result.queue[0].preview).toEqual({ id: "local:fixed", text: "hello" });
+    expect(result.queue[0].meta).toEqual({ local_id: "local:fixed", text: "hello" });
   });
 
   it("consumeCreateQueue: success drains queue in order", async () => {
     const queue = [
-      { client_id: "c1", payload: { value: 1 }, preview: { id: "p1" } },
-      { client_id: "c2", payload: { value: 2 }, preview: { id: "p2" } },
+      { client_id: "c1", payload: { value: 1 }, meta: { queued_at: "t1" } },
+      { client_id: "c2", payload: { value: 2 }, meta: { queued_at: "t2" } },
     ];
     const seen: number[] = [];
     const result = await consumeCreateQueue({
@@ -85,9 +85,9 @@ describe("offlineSync/createQueue", () => {
 
   it("consumeCreateQueue: failure keeps failed and remaining entries", async () => {
     const queue = [
-      { client_id: "c1", payload: { value: 1 }, preview: { id: "p1" } },
-      { client_id: "c2", payload: { value: 2 }, preview: { id: "p2" } },
-      { client_id: "c3", payload: { value: 3 }, preview: { id: "p3" } },
+      { client_id: "c1", payload: { value: 1 }, meta: { queued_at: "t1" } },
+      { client_id: "c2", payload: { value: 2 }, meta: { queued_at: "t2" } },
+      { client_id: "c3", payload: { value: 3 }, meta: { queued_at: "t3" } },
     ];
     const result = await consumeCreateQueue({
       queue,

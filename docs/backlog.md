@@ -63,6 +63,8 @@
   - 影響範囲: frontend/docs
 
 ## Done
+- [x] BL-031 (RQ-OPS-013): pending キュー保存構造の正規化と互換維持リファクタを実装する
+  - 証跡: `apps/frontend/src/memoOfflineSync.ts`, `apps/frontend/src/offlineSync/createQueue.ts`, `apps/frontend/src/App.tsx`, `apps/frontend/src/memoOfflineSync.test.ts`, `docs/offline-sync-flow.md`
 - [x] BL-030 (RQ-OPS-012, RQ-QLT-006): オフライン同期キューの共通化と網羅テストを実装する
   - 証跡: `apps/frontend/src/offlineSync/createQueue.ts`, `apps/frontend/src/memoOfflineSync.ts`, `apps/frontend/src/App.tsx`, `apps/frontend/src/offlineSync/createQueue.test.ts`, `apps/frontend/src/memoOfflineSync.test.ts`, `apps/frontend/package.json`
 - [x] BL-029 (RQ-MEM-008): メモログのローカルキャッシュ + 同期待ちキューを実装する
