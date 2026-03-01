@@ -740,32 +740,6 @@ export function App() {
                       </>
                     ) : (
                       <>
-                        <div className="row-toolbar">
-                          <button
-                            type="button"
-                            className="row-icon-btn"
-                            onClick={() => startEditing(memo)}
-                          >
-                            <svg viewBox="0 0 24 24" aria-hidden="true">
-                              <path d="M3 17.25V21h3.75L19.8 7.95 16.05 4.2z" />
-                              <path d="m14.5 5.75 3.75 3.75" />
-                            </svg>
-                          </button>
-                          <button
-                            type="button"
-                            className="row-icon-btn"
-                            onClick={() => void handleDelete(memo.id)}
-                          >
-                            <svg viewBox="0 0 24 24" aria-hidden="true">
-                              <path d="M4 7h16" />
-                              <path d="M10 11v6" />
-                              <path d="M14 11v6" />
-                              <path d="M6 7l1 13h10l1-13" />
-                              <path d="M9 7V4h6v3" />
-                            </svg>
-                          </button>
-                        </div>
-
                         <div
                           className="memo-content"
                           dangerouslySetInnerHTML={{ __html: memo.renderedBody }}
@@ -780,9 +754,36 @@ export function App() {
                               </span>
                             ))}
                           </div>
-                          <div className="memo-date">
-                            <time dateTime={memo.created_at}>{memo.absoluteDate}</time>
-                            {memo.relativeDate ? <span>{` / ${memo.relativeDate}`}</span> : null}
+                          <div className="memo-meta">
+                            <div className="memo-date">
+                              <time dateTime={memo.created_at}>{memo.absoluteDate}</time>
+                              {memo.relativeDate ? <span>{` / ${memo.relativeDate}`}</span> : null}
+                            </div>
+                            <div className="row-toolbar">
+                              <button
+                                type="button"
+                                className="row-icon-btn"
+                                onClick={() => startEditing(memo)}
+                              >
+                                <svg viewBox="0 0 24 24" aria-hidden="true">
+                                  <path d="M3 17.25V21h3.75L19.8 7.95 16.05 4.2z" />
+                                  <path d="m14.5 5.75 3.75 3.75" />
+                                </svg>
+                              </button>
+                              <button
+                                type="button"
+                                className="row-icon-btn"
+                                onClick={() => void handleDelete(memo.id)}
+                              >
+                                <svg viewBox="0 0 24 24" aria-hidden="true">
+                                  <path d="M4 7h16" />
+                                  <path d="M10 11v6" />
+                                  <path d="M14 11v6" />
+                                  <path d="M6 7l1 13h10l1-13" />
+                                  <path d="M9 7V4h6v3" />
+                                </svg>
+                              </button>
+                            </div>
                           </div>
                         </div>
                       </>
