@@ -150,6 +150,14 @@ function formatClock(totalSec: number): string {
   return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
 }
 
+/** 超過時は超過経過時間を表示するための時刻フォーマットを返す。 */
+function formatTimerDisplay(remainingSec: number): string {
+  if (remainingSec >= 0) {
+    return formatClock(remainingSec);
+  }
+  return formatClock(Math.abs(remainingSec));
+}
+
 /** 履歴表示用の短い時刻フォーマット。 */
 function formatTime(iso: string): string {
   return new Intl.DateTimeFormat("ja-JP", {
@@ -697,7 +705,7 @@ export function SessionView({ settings }: SessionViewProps) {
             />
           </svg>
           <div className="session-clock-text">
-            <p className="session-clock-time">{formatClock(timer.remainingSec)}</p>
+            <p className="session-clock-time">{formatTimerDisplay(timer.remainingSec)}</p>
             <p className="session-clock-state">{mainLabel}</p>
           </div>
         </div>
