@@ -646,9 +646,6 @@ export function App() {
                 </div>
 
                 <div className="composer-footer">
-                  <p className="composer-hint">
-                    <kbd>Ctrl</kbd> + <kbd>Enter</kbd> to save
-                  </p>
                   <button
                     type="submit"
                     className="save-btn"

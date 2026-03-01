@@ -237,14 +237,8 @@ kbd {
   margin-top: 16px;
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
   gap: 12px;
-}
-
-.composer-hint {
-  margin: 0;
-  color: #6f6b66;
-  font-size: 0.95rem;
 }
 
 .save-btn {
@@ -747,6 +741,15 @@ kbd {
 
   .composer {
     padding: 14px;
+  }
+
+  .composer-footer {
+    width: 100%;
+  }
+
+  .composer-footer .save-btn {
+    width: 100%;
+    justify-content: center;
   }
 
   .composer-textarea {
