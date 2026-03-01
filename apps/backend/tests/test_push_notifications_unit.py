@@ -205,3 +205,74 @@ def test_dispatch_due_notifications_skips_session_without_planned_end_at(monkeyp
 
     assert result.sent_notifications == 0
     assert send_count["value"] == 0
+
+
+def test_dispatch_due_notifications_continues_on_unexpected_send_error(monkeypatch) -> None:
+    """個別送信の想定外例外が出ても dispatch 全体を失敗させない。"""
+
+    now = datetime(2026, 3, 1, 12, 31, tzinfo=UTC)
+    planned_end = now - timedelta(minutes=31)
+    marked_steps: list[int] = []
+    called_endpoints: list[str] = []
+
+    monkeypatch.setattr(
+        push_notifications,
+        "_assert_vapid_settings",
+        lambda: ("public-key", "private-key", "mailto:test@example.com"),
+    )
+    monkeypatch.setattr(push_notifications, "_get_client", lambda: object())
+    monkeypatch.setattr(push_notifications, "_ensure_demo_user_once", lambda: None)
+    monkeypatch.setattr(
+        push_notifications,
+        "_load_active_subscriptions",
+        lambda _client: [
+            {
+                "id": "sub-1",
+                "endpoint": "https://example.com/push/fail",
+                "p256dh": "p256dh-key",
+                "auth": "auth-key",
+            },
+            {
+                "id": "sub-2",
+                "endpoint": "https://example.com/push/success",
+                "p256dh": "p256dh-key",
+                "auth": "auth-key",
+            },
+        ],
+    )
+    monkeypatch.setattr(
+        push_notifications,
+        "_load_running_sessions",
+        lambda _client: [
+            {
+                "id": "session-1",
+                "title": "Deep work",
+                "session_type": "focus",
+                "planned_end_at": planned_end.isoformat(),
+                "last_notified_step": -1,
+            }
+        ],
+    )
+
+    def fake_webpush(**kwargs) -> None:  # type: ignore[no-untyped-def]
+        endpoint = str(kwargs["subscription_info"]["endpoint"])
+        called_endpoints.append(endpoint)
+        if endpoint.endswith("/fail"):
+            raise RuntimeError("unexpected send error")
+
+    monkeypatch.setattr(push_notifications, "webpush", fake_webpush)
+    monkeypatch.setattr(
+        push_notifications,
+        "_mark_session_notified",
+        lambda _client, _session_id, step: marked_steps.append(step),
+    )
+
+    result = push_notifications.dispatch_due_notifications(now=now)
+
+    assert result.checked_sessions == 1
+    assert result.sent_notifications == 1
+    assert marked_steps == [2]
+    assert called_endpoints == [
+        "https://example.com/push/fail",
+        "https://example.com/push/success",
+    ]

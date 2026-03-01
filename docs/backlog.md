@@ -61,6 +61,7 @@
   - 背景: GitHub Actions から Render Free を叩く際、コールドスタートでタイムアウトして dispatch 失敗が発生する
   - 受け入れ条件: dispatch workflow に retry と十分な timeout を設定し、単発失敗で通知配信が停止しない
   - 受け入れ条件: schedule 実行の偏りを抑えるため cron 分散を行う
+  - 受け入れ条件: 単一 subscription の送信失敗で dispatch 全体が 502 にならない
   - 受け入れ条件: workflow ログで dispatch 応答本文を確認できる
   - 影響範囲: ci/docs
 - [ ] BL-037 (RQ-POM-006): iOS PWA 復帰時のタイマー追従を実装する

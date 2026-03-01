@@ -19,14 +19,24 @@ jobs:
           test -n "${{ secrets.PUSH_DISPATCH_TOKEN }}"
       - name: Call push dispatch API
         run: |
-          response="$(
-            curl --fail-with-body --show-error --silent \
+          response_file="$(mktemp)"
+          if ! http_code="$(
+            curl --show-error --silent \
               --retry 2 \
               --retry-delay 5 \
               --connect-timeout 10 \
               --max-time 90 \
               -X POST \
               -H "X-Dispatch-Token: ${{ secrets.PUSH_DISPATCH_TOKEN }}" \
+              -o "$response_file" \
+              -w "%{http_code}" \
               "${{ secrets.PUSH_DISPATCH_URL }}"
-          )"
-          echo "$response"
+          )"; then
+            cat "$response_file"
+            exit 1
+          fi
+          cat "$response_file"
+          if [ "$http_code" -lt 200 ] || [ "$http_code" -ge 300 ]; then
+            echo "push dispatch failed: HTTP $http_code" >&2
+            exit 1
+          fi

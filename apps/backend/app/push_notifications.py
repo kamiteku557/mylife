@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 import json
+import logging
+from collections.abc import Callable
 from datetime import UTC, datetime
 from functools import lru_cache
-from typing import Any
+from typing import Any, TypeVar
 
 from pydantic import BaseModel, Field
 from pywebpush import WebPushException, webpush
@@ -15,6 +17,8 @@ from app.config import get_settings
 from app.memo_logs import DEMO_USER_ID
 
 OVERDUE_NOTIFY_STEP_SECONDS = 15 * 60
+T = TypeVar("T")
+logger = logging.getLogger(__name__)
 
 
 class PushSubscriptionKeys(BaseModel):
@@ -91,6 +95,19 @@ def _ensure_demo_user_once() -> None:
         {"id": DEMO_USER_ID, "display_name": "Demo User"},
         on_conflict="id",
     ).execute()
+
+
+def _run_with_disconnect_retry(operation: Callable[[], T]) -> T:
+    """Supabase 一時切断時のみ 1 回だけ再試行する。"""
+
+    try:
+        return operation()
+    except Exception as exc:
+        if "Server disconnected" not in str(exc):
+            raise
+        # 一時切断時のみクライアントを再生成して再試行する。
+        _get_client.cache_clear()
+        return operation()
 
 
 def _parse_datetime(value: str | None) -> datetime:
@@ -225,80 +242,99 @@ def _mark_session_notified(client: Client, session_id: str, step: int) -> None:
 def dispatch_due_notifications(now: datetime | None = None) -> PushDispatchResult:
     """通知期限到達セッションに Push を送信する。"""
 
-    _public_key, private_key, subject = _assert_vapid_settings()
-    client = _get_client()
-    _ensure_demo_user_once()
+    def _dispatch() -> PushDispatchResult:
+        _public_key, private_key, subject = _assert_vapid_settings()
+        client = _get_client()
+        _ensure_demo_user_once()
 
-    current = now or datetime.now(tz=UTC)
-    subscriptions = _load_active_subscriptions(client)
-    sessions = _load_running_sessions(client)
-    if not subscriptions or not sessions:
-        return PushDispatchResult(
-            checked_sessions=len(sessions),
-            sent_notifications=0,
-            deactivated_subscriptions=0,
-        )
+        current = now or datetime.now(tz=UTC)
+        subscriptions = _load_active_subscriptions(client)
+        sessions = _load_running_sessions(client)
+        if not subscriptions or not sessions:
+            return PushDispatchResult(
+                checked_sessions=len(sessions),
+                sent_notifications=0,
+                deactivated_subscriptions=0,
+            )
 
-    sent_notifications = 0
-    deactivated_subscriptions = 0
-    deactivated_ids: set[str] = set()
+        sent_notifications = 0
+        deactivated_subscriptions = 0
+        deactivated_ids: set[str] = set()
 
-    for session in sessions:
-        planned_end_raw = session.get("planned_end_at")
-        if not isinstance(planned_end_raw, str) or not planned_end_raw:
-            continue
-        planned_end_at = _parse_datetime(planned_end_raw)
-        step = compute_notification_step(planned_end_at, current)
-        if step < 0:
-            continue
-
-        last_step = int(session.get("last_notified_step") or -1)
-        if step <= last_step:
-            continue
-
-        title, body = build_notification_payload(step, str(session.get("session_type") or "focus"))
-        payload = json.dumps(
-            {
-                "title": title,
-                "body": body,
-                "tag": f"pomodoro-{session['id']}-step-{step}",
-            }
-        )
-
-        sent_in_this_step = False
-        for subscription in subscriptions:
-            subscription_id = str(subscription["id"])
-            if subscription_id in deactivated_ids:
+        for session in sessions:
+            planned_end_raw = session.get("planned_end_at")
+            if not isinstance(planned_end_raw, str) or not planned_end_raw:
+                continue
+            planned_end_at = _parse_datetime(planned_end_raw)
+            step = compute_notification_step(planned_end_at, current)
+            if step < 0:
                 continue
 
-            subscription_info = {
-                "endpoint": subscription["endpoint"],
-                "keys": {
-                    "p256dh": subscription["p256dh"],
-                    "auth": subscription["auth"],
-                },
-            }
-            try:
-                webpush(
-                    subscription_info=subscription_info,
-                    data=payload,
-                    vapid_private_key=private_key,
-                    vapid_claims={"sub": subject},
-                )
-                sent_notifications += 1
-                sent_in_this_step = True
-            except WebPushException as exc:
-                status_code = getattr(getattr(exc, "response", None), "status_code", None)
-                if status_code in {404, 410}:
-                    _deactivate_subscription(client, subscription_id)
-                    deactivated_ids.add(subscription_id)
-                    deactivated_subscriptions += 1
+            last_step = int(session.get("last_notified_step") or -1)
+            if step <= last_step:
+                continue
 
-        if sent_in_this_step:
-            _mark_session_notified(client, str(session["id"]), step)
+            title, body = build_notification_payload(
+                step,
+                str(session.get("session_type") or "focus"),
+            )
+            payload = json.dumps(
+                {
+                    "title": title,
+                    "body": body,
+                    "tag": f"pomodoro-{session['id']}-step-{step}",
+                }
+            )
 
-    return PushDispatchResult(
-        checked_sessions=len(sessions),
-        sent_notifications=sent_notifications,
-        deactivated_subscriptions=deactivated_subscriptions,
-    )
+            sent_in_this_step = False
+            for subscription in subscriptions:
+                subscription_id = str(subscription["id"])
+                if subscription_id in deactivated_ids:
+                    continue
+
+                subscription_info = {
+                    "endpoint": subscription["endpoint"],
+                    "keys": {
+                        "p256dh": subscription["p256dh"],
+                        "auth": subscription["auth"],
+                    },
+                }
+                try:
+                    webpush(
+                        subscription_info=subscription_info,
+                        data=payload,
+                        vapid_private_key=private_key,
+                        vapid_claims={"sub": subject},
+                    )
+                    sent_notifications += 1
+                    sent_in_this_step = True
+                except WebPushException as exc:
+                    status_code = getattr(getattr(exc, "response", None), "status_code", None)
+                    if status_code in {404, 410}:
+                        _deactivate_subscription(client, subscription_id)
+                        deactivated_ids.add(subscription_id)
+                        deactivated_subscriptions += 1
+                        continue
+                    logger.warning(
+                        "web push send failed: subscription_id=%s status=%s",
+                        subscription_id,
+                        status_code,
+                    )
+                except Exception as exc:  # noqa: BLE001
+                    # 個別送信失敗で dispatch 全体を落とさない。
+                    logger.warning(
+                        "web push send raised unexpected error: subscription_id=%s error=%s",
+                        subscription_id,
+                        exc,
+                    )
+
+            if sent_in_this_step:
+                _mark_session_notified(client, str(session["id"]), step)
+
+        return PushDispatchResult(
+            checked_sessions=len(sessions),
+            sent_notifications=sent_notifications,
+            deactivated_subscriptions=deactivated_subscriptions,
+        )
+
+    return _run_with_disconnect_retry(_dispatch)
