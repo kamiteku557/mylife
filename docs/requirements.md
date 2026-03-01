@@ -51,6 +51,12 @@
   - 受け入れ条件: 最低限の事前確認（`eslint -v`, `lsof` など）で作業開始可否を判定できる
   - 対応タスク: BL-027
   - 証跡: 未記入
+- [x] RQ-OPS-012: オフライン同期キューを再利用可能な共通モジュールとして提供する
+  - 受け入れ条件: localStorage 永続化 + 同期待ちキュー + 再送制御を抽象化した共通モジュールが frontend で利用できる
+  - 受け入れ条件: メモ機能は共通モジュールを利用して実装され、機能固有ロジック（payload/merge/表示）と分離される
+  - 受け入れ条件: 将来のポモドーロ等でも再利用できる API 形状（エンティティ種別依存の型パラメータ）になっている
+  - 対応タスク: BL-030
+  - 証跡: `apps/frontend/src/offlineSync/createQueue.ts`, `apps/frontend/src/memoOfflineSync.ts`, `apps/frontend/src/App.tsx`, `docs/backlog.md`
 
 ## B. MVP機能要件
 - [x] RQ-POM-001: ポモドーロ設定（取得/更新）ができる
@@ -91,6 +97,12 @@
   - 受け入れ条件: メモ記入画面での過去メモ表示数を設定でき、デフォルト値は20件である
   - 受け入れ条件: メモ文字サイズを設定でき、デフォルト値は現行より大きい
   - 対応タスク: BL-017
+  - 証跡: `apps/frontend/src/App.tsx`, `apps/frontend/src/styles.css`, `docs/backlog.md`
+- [x] RQ-MEM-008: メモログの初回表示と保存でローカルキャッシュを使った体感速度改善を行う
+  - 受け入れ条件: 初回表示時に `localStorage` のキャッシュ済みメモを先に描画し、その後に API 同期で更新できる
+  - 受け入れ条件: 新規メモ作成時に UI へ即時反映し、Supabase 登録完了後にサーバー確定データへ置換できる
+  - 受け入れ条件: API 失敗時でも一時保存データ（同期待ち）を保持し、再同期を試行できる
+  - 対応タスク: BL-029
   - 証跡: `apps/frontend/src/App.tsx`, `apps/frontend/src/styles.css`, `docs/backlog.md`
 - [x] RQ-MEM-005: メモ保存の体感遅延を許容範囲に抑える
   - 受け入れ条件: 初回保存時のボトルネックを特定し、不要な待ち時間を削減できる
@@ -150,6 +162,11 @@
   - 受け入れ条件: 手動選択したテーマは永続化され、再訪時に同じテーマで表示される
   - 対応タスク: BL-028
   - 証跡: 未記入
+- [x] RQ-QLT-006: オフライン同期キューのフロントエンドテストを整備する
+  - 受け入れ条件: キュー追加、同期成功、同期失敗継続、再起動後復元、重複防止の主要ケースを自動テストで検証できる
+  - 受け入れ条件: テスト実行コマンドが frontend package scripts から実行できる
+  - 対応タスク: BL-030
+  - 証跡: `apps/frontend/src/offlineSync/createQueue.test.ts`, `apps/frontend/src/memoOfflineSync.test.ts`, `apps/frontend/package.json`, `pnpm test`
 - [x] RQ-DOC-001: Docstring とコードコメントの記述言語ルールが定義されている
   - 受け入れ条件: `AGENTS.md` にルールが明記され、実装コードの Docstring/コメントがルールに準拠している
   - 対応タスク: BL-013

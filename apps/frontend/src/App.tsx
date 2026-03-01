@@ -5,21 +5,23 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
+import {
+  applyMemoSyncSuccesses,
+  enqueueMemoCreate,
+  loadMemoCache,
+  loadPendingMemoQueue,
+  markSyncedMemo,
+  mergeMemoList,
+  saveMemoCache,
+  savePendingMemoQueue,
+  syncPendingMemoCreates,
+  type MemoCreatePayload,
+  type MemoLog,
+} from "./memoOfflineSync";
 import { SessionView } from "./SessionView";
-
-interface MemoLog {
-  id: string;
-  user_id: string;
-  title: string;
-  body_md: string;
-  log_date: string;
-  related_session_id: string | null;
-  tags: string[];
-  created_at: string;
-  updated_at: string;
-}
 
 interface AppSettings {
   memoDisplayCount: number;
@@ -297,6 +299,8 @@ export function App() {
   const [editTags, setEditTags] = useState<string[]>([]);
   const [editTagInput, setEditTagInput] = useState("");
   const [loading, setLoading] = useState(true);
+  const [syncingMemos, setSyncingMemos] = useState(false);
+  const [pendingSyncCount, setPendingSyncCount] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [settingsNotice, setSettingsNotice] = useState("");
@@ -304,6 +308,7 @@ export function App() {
   const [pomodoroSettingsDraft, setPomodoroSettingsDraft] = useState<PomodoroSettings | null>(null);
   const [pomodoroSettingsSaving, setPomodoroSettingsSaving] = useState(false);
   const hasApiConfigError = API_BASE_URL_ERROR.length > 0;
+  const pendingSyncInFlightRef = useRef(false);
 
   useEffect(() => {
     saveSettings(settings);
@@ -331,6 +336,61 @@ export function App() {
     document.documentElement.setAttribute("data-theme", theme);
   }, [theme]);
 
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+    saveMemoCache(window.localStorage, memoLogs);
+  }, [memoLogs]);
+
+  useEffect(() => {
+    if (hasApiConfigError) {
+      return;
+    }
+    // 起動直後の待ち時間を減らすため、先にローカルキャッシュを表示する。
+    const cached = loadMemoCache(window.localStorage);
+    const pendingQueue = loadPendingMemoQueue(window.localStorage);
+    const pendingPreviews = pendingQueue.map((item) => ({
+      ...item.preview,
+      sync_status: "pending" as const,
+    }));
+    const merged = mergeMemoList(cached, pendingPreviews);
+    if (merged.length > 0) {
+      setMemoLogs(merged);
+      setLoading(false);
+    }
+    setPendingSyncCount(pendingQueue.length);
+  }, [hasApiConfigError]);
+
+  const syncPendingMemos = useCallback(async () => {
+    if (hasApiConfigError || pendingSyncInFlightRef.current) {
+      return;
+    }
+    pendingSyncInFlightRef.current = true;
+    setSyncingMemos(true);
+    try {
+      const synced = await syncPendingMemoCreates({
+        storage: window.localStorage,
+        createRemote: async (payload) =>
+          fetchJson<MemoLog>("/api/v1/memo-logs", {
+            method: "POST",
+            body: JSON.stringify(payload),
+          }),
+      });
+      setPendingSyncCount(synced.pendingQueue.length);
+      if (synced.successes.length > 0) {
+        setMemoLogs((prev) => applyMemoSyncSuccesses(prev, synced.successes));
+      }
+      if (synced.error) {
+        setError(`同期待ちメモの送信に失敗しました: ${synced.error.message}`);
+      }
+    } finally {
+      pendingSyncInFlightRef.current = false;
+      setSyncingMemos(false);
+      setLoading(false);
+    }
+  }, [hasApiConfigError]);
+
   const refreshMemos = useCallback(async () => {
     if (hasApiConfigError) {
       // 設定不足時は通信を試行せず、原因を画面に明示する。
@@ -339,22 +399,34 @@ export function App() {
       return;
     }
 
-    setLoading(true);
+    setSyncingMemos(true);
     setError("");
     try {
       const list = await fetchJson<MemoLog[]>("/api/v1/memo-logs");
-      list.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-      setMemoLogs(list);
+      const synced = list.map((item) => markSyncedMemo(item));
+      const pendingQueue = loadPendingMemoQueue(window.localStorage);
+      const pendingPreviews = pendingQueue.map((item) => ({
+        ...item.preview,
+        sync_status: "pending" as const,
+      }));
+      setPendingSyncCount(pendingQueue.length);
+      setMemoLogs(mergeMemoList(synced, pendingPreviews));
+      saveMemoCache(window.localStorage, synced);
     } catch (eventualError) {
       setError(eventualError instanceof Error ? eventualError.message : "failed to load memo logs");
     } finally {
+      setSyncingMemos(false);
       setLoading(false);
     }
   }, [hasApiConfigError]);
 
   useEffect(() => {
-    void refreshMemos();
-  }, [refreshMemos]);
+    const runInitialSync = async () => {
+      await refreshMemos();
+      await syncPendingMemos();
+    };
+    void runInitialSync();
+  }, [refreshMemos, syncPendingMemos]);
 
   useEffect(() => {
     if (hasApiConfigError) {
@@ -449,32 +521,25 @@ export function App() {
         return;
       }
 
-      setSubmitting(true);
       setError("");
-      try {
-        const payload = {
-          title: inferTitleFromBody(composerBody),
-          body_md: composerBody.trim(),
-          log_date: new Date().toISOString().slice(0, 10),
-          tags: composerTags,
-          // セッション紐づけUIは未提供のため、現時点はnull固定で送信する。
-          related_session_id: null,
-        };
-        const created = await fetchJson<MemoLog>("/api/v1/memo-logs", {
-          method: "POST",
-          body: JSON.stringify(payload),
-        });
-        setMemoLogs((prev) => [created, ...prev]);
-        setComposerBody("");
-        setComposerTags([]);
-        setComposerTagInput("");
-      } catch (eventualError) {
-        setError(eventualError instanceof Error ? eventualError.message : "failed to save");
-      } finally {
-        setSubmitting(false);
-      }
+      // 先にローカルへ反映し、通信はバックグラウンドで実行する。
+      const payload: MemoCreatePayload = {
+        title: inferTitleFromBody(composerBody),
+        body_md: composerBody.trim(),
+        log_date: new Date().toISOString().slice(0, 10),
+        tags: composerTags,
+        // セッション紐づけUIは未提供のため、現時点はnull固定で送信する。
+        related_session_id: null,
+      };
+      const queued = enqueueMemoCreate(window.localStorage, payload);
+      setPendingSyncCount(queued.queue.length);
+      setMemoLogs((prev) => mergeMemoList(prev, [queued.preview]));
+      setComposerBody("");
+      setComposerTags([]);
+      setComposerTagInput("");
+      void syncPendingMemos();
     },
-    [composerBody, composerTags],
+    [composerBody, composerTags, syncPendingMemos],
   );
 
   const handleSaveEdit = useCallback(async () => {
@@ -488,6 +553,10 @@ export function App() {
 
     const source = memoLogs.find((memo) => memo.id === editingId);
     if (!source) {
+      return;
+    }
+    if (source.sync_status === "pending") {
+      setError("同期待ちメモは同期完了後に編集できます");
       return;
     }
 
@@ -505,7 +574,9 @@ export function App() {
         method: "PUT",
         body: JSON.stringify(payload),
       });
-      setMemoLogs((prev) => prev.map((memo) => (memo.id === editingId ? updated : memo)));
+      setMemoLogs((prev) =>
+        prev.map((memo) => (memo.id === editingId ? markSyncedMemo(updated) : memo)),
+      );
       cancelEditing();
     } catch (eventualError) {
       setError(eventualError instanceof Error ? eventualError.message : "failed to update");
@@ -516,6 +587,19 @@ export function App() {
 
   const handleDelete = useCallback(
     async (memoId: string) => {
+      const target = memoLogs.find((memo) => memo.id === memoId);
+      if (!target) {
+        return;
+      }
+      if (target.sync_status === "pending") {
+        const filteredQueue = loadPendingMemoQueue(window.localStorage).filter(
+          (item) => item.preview.id !== memoId,
+        );
+        savePendingMemoQueue(window.localStorage, filteredQueue);
+        setPendingSyncCount(filteredQueue.length);
+        setMemoLogs((prev) => prev.filter((memo) => memo.id !== memoId));
+        return;
+      }
       if (!window.confirm("このメモを削除しますか？")) {
         return;
       }
@@ -530,7 +614,7 @@ export function App() {
         setError(eventualError instanceof Error ? eventualError.message : "failed to delete");
       }
     },
-    [cancelEditing, editingId],
+    [cancelEditing, editingId, memoLogs],
   );
 
   const renderedMemos = useMemo(
@@ -740,6 +824,14 @@ export function App() {
 
             {loading ? <p className="status-text">Loading...</p> : null}
 
+            {!loading && (syncingMemos || pendingSyncCount > 0) ? (
+              <p className="status-text">
+                {syncingMemos ? "サーバー同期中..." : null}
+                {syncingMemos && pendingSyncCount > 0 ? " / " : null}
+                {pendingSyncCount > 0 ? `同期待ち ${pendingSyncCount} 件` : null}
+              </p>
+            ) : null}
+
             {!loading && renderedMemos.length === 0 ? (
               <div className="empty-state">
                 <p className="empty-title">No memos yet</p>
@@ -754,6 +846,7 @@ export function App() {
             <section aria-label="Memo log" className="timeline">
               {visibleMemos.map((memo) => {
                 const isEditing = editingId === memo.id;
+                const isPending = memo.sync_status === "pending";
                 return (
                   <article key={memo.id} className="memo-row">
                     {isEditing ? (
@@ -830,12 +923,17 @@ export function App() {
                             <div className="memo-date">
                               <time dateTime={memo.created_at}>{memo.absoluteDate}</time>
                               {memo.relativeDate ? <span>{` / ${memo.relativeDate}`}</span> : null}
+                              {isPending ? (
+                                <span className="memo-sync-chip"> / 同期待ち</span>
+                              ) : null}
                             </div>
                             <div className="row-toolbar">
                               <button
                                 type="button"
                                 className="row-icon-btn"
                                 onClick={() => startEditing(memo)}
+                                disabled={isPending}
+                                title={isPending ? "同期待ちは編集できません" : undefined}
                               >
                                 <svg viewBox="0 0 24 24" aria-hidden="true">
                                   <path d="M3 17.25V21h3.75L19.8 7.95 16.05 4.2z" />
@@ -846,6 +944,7 @@ export function App() {
                                 type="button"
                                 className="row-icon-btn"
                                 onClick={() => void handleDelete(memo.id)}
+                                title={isPending ? "同期待ちはローカルから削除します" : undefined}
                               >
                                 <svg viewBox="0 0 24 24" aria-hidden="true">
                                   <path d="M4 7h16" />

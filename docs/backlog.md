@@ -63,6 +63,10 @@
   - 影響範囲: frontend/docs
 
 ## Done
+- [x] BL-030 (RQ-OPS-012, RQ-QLT-006): オフライン同期キューの共通化と網羅テストを実装する
+  - 証跡: `apps/frontend/src/offlineSync/createQueue.ts`, `apps/frontend/src/memoOfflineSync.ts`, `apps/frontend/src/App.tsx`, `apps/frontend/src/offlineSync/createQueue.test.ts`, `apps/frontend/src/memoOfflineSync.test.ts`, `apps/frontend/package.json`
+- [x] BL-029 (RQ-MEM-008): メモログのローカルキャッシュ + 同期待ちキューを実装する
+  - 証跡: `apps/frontend/src/App.tsx`, `apps/frontend/src/styles.css`, `docs/requirements.md`
 - [x] BL-023 (RQ-QLT-004): スマホ表示でヘッダーが見えない不具合を修正する
   - 証跡: `apps/frontend/src/styles.css`, `docs/backlog.md`, `docs/requirements.md`
 - [x] BL-019 (RQ-POM-003): セッション遷移と編集中UXの不具合を修正する

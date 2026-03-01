@@ -390,6 +390,11 @@ kbd {
   padding: 2px;
 }
 
+.row-icon-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
 .row-icon-btn svg {
   width: 18px;
   height: 18px;
@@ -471,6 +476,11 @@ kbd {
   color: var(--muted);
   font-size: 0.9rem;
   white-space: nowrap;
+}
+
+.memo-sync-chip {
+  color: var(--text-muted);
+  font-weight: 600;
 }
 
 .edit-textarea {
