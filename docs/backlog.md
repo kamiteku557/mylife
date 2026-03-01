@@ -36,6 +36,18 @@
   - 背景: デザイン確認や機能確認をデプロイ前にローカルで再現できる状態にしたい
   - 受け入れ条件: 必要な環境変数、起動順序、確認ポイント（frontend/backend/api）を docs に明記する
   - 影響範囲: docs/frontend/backend
+- [ ] BL-025 (RQ-OPS-011): worktree 利用時の開発環境セットアップ手順を標準化する
+  - 背景: worktree を継続利用する方針のため、依存未初期化（`eslint: command not found`）やポート競合を再発させない運用ルールを残したい
+  - 詳細方針:
+  - 新規 worktree 作成直後の初期化手順を定義する（frontend は `pnpm install`、backend は必要時のみ `uv sync`）
+  - backend を `uv sync` する条件を明文化する（`pyproject.toml` / `uv.lock` 変更時、backend 作業開始時など）
+  - ポート割り当てルールを定義する（例: default 5173/8000 と別に検証用 5184/8100 を使い、`lsof` で競合確認する）
+  - 作業開始時チェックリストを定義する（`pnpm --filter mylife-frontend exec eslint -v`、`lsof -iTCP:<port>`、env確認）
+  - README か `docs/development-workflow.md` に「worktree利用時」節を追加し、コマンド例を記載する
+  - 受け入れ条件: 新しい worktree で、手順どおりに実行すると frontend lint とローカル起動確認を再現できる
+  - 受け入れ条件: 既存 worktree との同時起動でポート衝突を回避できる
+  - 受け入れ条件: 「いつ `uv sync` が必要か」を第三者が判断できる記述になっている
+  - 影響範囲: docs/frontend/backend
 
 ## In Progress
 - [ ] BL-014 (RQ-MEM-006): メモログUIをデザインモック準拠に更新する
