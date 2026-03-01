@@ -9,8 +9,9 @@
 1. 新機能/修正は、先に `docs/requirements.md` とこの `docs/backlog.md` を更新する。
 2. 実装着手時にタスクを `Ready` から `In Progress` に移動する。
 3. 完了時は受け入れ条件を確認し、`Done` に移動する。
-4. `Done` に移したら、対応する要件IDを `docs/requirements.md` で `[x]` にする。
-5. 最後に `main` へマージし、残タスクと新タスクをこのファイルへ反映する。
+4. `Done` へ移す際は、`In Progress` に書いた受け入れ条件を `Done` 側にも残す（証跡だけにしない）。
+5. `Done` に移したら、対応する要件IDを `docs/requirements.md` で `[x]` にする。
+6. 最後に `main` へマージし、残タスクと新タスクをこのファイルへ反映する。
 
 ## Ready
 - [ ] BL-002 (RQ-OPS-004): Supabase Auth によるAPI保護を実装する
@@ -64,8 +65,13 @@
 
 ## Done
 - [x] BL-029 (RQ-QLT-005): ダークモード実装のトークン整理とテーマロジック分離を行う
+  - 受け入れ条件: CSSの直値色指定をテーマトークンへ統一し、重複トークンを削減できる
+  - 受け入れ条件: テーマ状態管理を `App.tsx` から `useTheme` へ切り出し、UIロジックとの責務分離ができる
+  - 受け入れ条件: 既存のテーマ切替挙動（OS連動 + 手動上書き + 永続化）を維持できる
   - 証跡: `apps/frontend/src/App.tsx`, `apps/frontend/src/styles.css`, `apps/frontend/src/useTheme.ts`, `docs/backlog.md`, `docs/requirements.md`
 - [x] BL-028 (RQ-QLT-005): ダークモード切替（OS連動 + 手動上書き）を実装する
+  - 受け入れ条件: 初期テーマは `prefers-color-scheme` に従い、ヘッダー操作で Light/Dark を即時切替できる
+  - 受け入れ条件: 手動選択テーマはローカル保存され、再訪時に復元される
   - 証跡: `apps/frontend/src/App.tsx`, `apps/frontend/src/styles.css`, `docs/backlog.md`, `docs/requirements.md`
 - [x] BL-023 (RQ-QLT-004): スマホ表示でヘッダーが見えない不具合を修正する
   - 証跡: `apps/frontend/src/styles.css`, `docs/backlog.md`, `docs/requirements.md`
@@ -111,3 +117,8 @@
   - 背景: <なぜ必要か>
   - 受け入れ条件: <完了の定義>
   - 影響範囲: <backend/frontend/db/docs>
+
+## Done記録テンプレート
+- [x] BL-XXX (RQ-...): <タスク名>
+  - 受け入れ条件: <In Progressで定義した条件を転記>
+  - 証跡: <ファイル/URL/ログ>
